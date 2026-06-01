@@ -6,6 +6,7 @@ import { setGlobalVolume, unlockAudio } from './audio/synth';
 import { findPreset, DEFAULT_PRESET_BINDINGS } from './audio/presets';
 import { type AggregatedState, type AgentName, AGENT_DISPLAY, STATE_LABEL } from './types';
 import * as StatusService from '../bindings/github.com/TarelX/AgentLamp/backend/service/statusservice';
+import * as InstallService from '../bindings/github.com/TarelX/AgentLamp/backend/service/installservice';
 
 const DEMO_STATES: AggregatedState[] = ['idle', 'running', 'waiting', 'error', 'fault', 'gray'];
 
@@ -45,6 +46,37 @@ function App() {
   const prevState = useRef<AggregatedState>(mainState);
   const [runtimeAgents, setRuntimeAgents] = useState<RuntimeAgent[]>([]);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [claudeInstalled, setClaudeInstalled] = useState<boolean | null>(null);
+  const [claudePath, setClaudePath] = useState<string>('');
+  const [installBusy, setInstallBusy] = useState(false);
+  const [installMsg, setInstallMsg] = useState<string>('');
+
+  const refreshClaudeStatus = async () => {
+    try {
+      const st = await InstallService.ClaudeStatus();
+      setClaudeInstalled(!!st.installed);
+      setClaudePath(st.settingsPath ?? '');
+    } catch {
+      setClaudeInstalled(null);
+    }
+  };
+
+  const handleClaudeInstall = async () => {
+    setInstallBusy(true);
+    setInstallMsg('');
+    try {
+      const st = claudeInstalled
+        ? await InstallService.ClaudeUninstall()
+        : await InstallService.ClaudeInstall();
+      setClaudeInstalled(!!st.installed);
+      setClaudePath(st.settingsPath ?? '');
+      setInstallMsg(st.installed ? '已写入, 请重启 Claude Code 让 hook 生效' : '已卸载');
+    } catch (e) {
+      setInstallMsg(`失败: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setInstallBusy(false);
+    }
+  };
 
   useEffect(() => {
     setGlobalVolume(globalVolume);
@@ -74,6 +106,7 @@ function App() {
         if (cancelled) return;
         setBackendConnected(true);
         applySnapshot(snap, setMainStateDemo, setRuntimeAgents);
+        void refreshClaudeStatus();
       })
       .catch(() => {
         // 浏览器开发模式下 (无 Wails runtime) 静默忽略, 走纯 demo 模式
@@ -145,6 +178,24 @@ function App() {
           {muted ? '已静音' : '静音'}
         </button>
       </section>
+
+      {claudeInstalled !== null && (
+        <section className="hooks-row">
+          <span className="hooks-label">
+            Claude hook: <strong>{claudeInstalled ? '已安装' : '未安装'}</strong>
+          </span>
+          <button
+            type="button"
+            className={`btn ${claudeInstalled ? '' : 'active'}`}
+            onClick={handleClaudeInstall}
+            disabled={installBusy}
+          >
+            {installBusy ? '处理中…' : claudeInstalled ? '卸载' : '一键安装'}
+          </button>
+          {installMsg && <span className="hooks-msg">{installMsg}</span>}
+          {claudePath && <span className="hooks-path" title={claudePath}>{claudePath}</span>}
+        </section>
+      )}
 
       <footer className="app-footer">
         <span>v0.1 · MIT · </span>

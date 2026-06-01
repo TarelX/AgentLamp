@@ -148,6 +148,41 @@ a:hover {
   box-shadow: 0 0 6px currentColor;
 }
 
+.hooks-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 10px 14px;
+  background: #14141a;
+  border: 1px solid #1f1f28;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.hooks-label {
+  color: #9ca3af;
+}
+
+.hooks-label strong {
+  color: #e5e7eb;
+}
+
+.hooks-msg {
+  color: #c084fc;
+}
+
+.hooks-path {
+  color: #4b5563;
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  font-size: 10px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-footer {
   font-size: 11px;
   color: #4b5563;

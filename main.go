@@ -36,11 +36,17 @@ func main() {
 		backend.AgentCodex,
 	})
 
+	installSvc, err := service.NewInstallService("http://" + webhookAddr)
+	if err != nil {
+		log.Fatalf("init install service: %v", err)
+	}
+
 	app := application.New(application.Options{
 		Name:        "AgentLamp",
 		Description: "跨平台 AI Agent 状态灯 - 程序员的过街信号",
 		Services: []application.Service{
 			application.NewService(service.NewStatusService(agg)),
+			application.NewService(installSvc),
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
