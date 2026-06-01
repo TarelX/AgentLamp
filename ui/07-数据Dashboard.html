@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 07 · 数据 Dashboard</title>
+  <style>
+    :root {
+      --bg: #0a0a0f; --panel: #14141a; --panel-2: #1a1a22; --line: #1f1f28;
+      --text: #e5e7eb; --muted: #9ca3af; --dim: #4b5563;
+      --green: #22c55e; --yellow: #eab308; --orange: #f59e0b; --red: #ef4444; --gray: #6b7280;
+      --accent: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 13px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: var(--text); }
+
+    /* Stage = Dashboard 本体 */
+    .dashboard {
+      flex: 1; min-height: 520px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+    }
+    /* 顶部条 */
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 14px; border-bottom: 1px solid var(--line);
+    }
+    .top-left { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), #6366f1);
+      display: grid; place-items: center;
+      font-weight: 800; color: white;
+      font-size: 14px;
+    }
+    .app-name { font-weight: 600; font-size: 14px; }
+    .app-sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .top-right { display: flex; gap: 20px; align-items: center; font-size: 12px; }
+    .kpi { text-align: right; }
+    .kpi .k { color: var(--muted); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .kpi .v { font-weight: 600; font-size: 15px; margin-top: 1px; font-variant-numeric: tabular-nums; }
+
+    /* 主网格 */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 14px;
+    }
+
+    /* Agent 卡片 */
+    .agent-card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex; flex-direction: column;
+      transition: border-color 0.3s;
+    }
+    .agent-card.active { border-color: rgba(168,85,247,0.4); box-shadow: 0 0 0 1px rgba(168,85,247,0.2); }
+    .agent-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .agent-id {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .agent-id .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      transition: all 0.3s;
+    }
+    .agent-id .name { font-weight: 600; font-size: 13px; }
+    .dot.idle    { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .dot.running { background: var(--yellow); box-shadow: 0 0 6px rgba(234,179,8,0.5); animation: pulse 1.4s ease-in-out infinite; }
+    .dot.waiting { background: var(--orange); box-shadow: 0 0 8px rgba(245,158,11,0.7); animation: blink 0.8s linear infinite; }
+    .dot.error   { background: var(--red); box-shadow: 0 0 10px rgba(239,68,68,0.8); animation: shake 0.4s linear infinite; }
+    .dot.gray    { background: var(--gray); }
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.18); opacity: 1; } }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-0.5px); } 75% { transform: translateX(0.5px); } }
+
+    .agent-state {
+      font-size: 11px; color: var(--muted);
+      padding: 2px 7px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+    }
+    .agent-state.idle    { color: var(--green); background: rgba(34,197,94,0.1); }
+    .agent-state.running { color: var(--yellow); background: rgba(234,179,8,0.1); }
+    .agent-state.waiting { color: var(--orange); background: rgba(245,158,11,0.15); }
+    .agent-state.error   { color: var(--red); background: rgba(239,68,68,0.15); }
+    .agent-task {
+      font-size: 11px; color: var(--text);
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      background: rgba(0,0,0,0.3);
+      padding: 6px 8px; border-radius: 4px;
+      margin: 8px 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .agent-meta {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--muted);
+      margin-top: auto;
+    }
+    .agent-meta .num { font-variant-numeric: tabular-nums; color: var(--text); }
+
+    /* Sparkline */
+    .sparkline {
+      width: 100%; height: 32px; margin: 6px 0;
+    }
+
+    /* 跨卡片宽 - 主灯 + 历史 */
+    .main-light-card {
+      grid-column: 1 / span 1;
+      grid-row: 1 / span 2;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 18px;
+      display: flex; flex-direction: column;
+    }
+    .main-light-card .label { color: var(--muted); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .main-light-card .big-state {
+      font-size: 32px; font-weight: 700; margin-top: 8px;
+      transition: color 0.4s;
+    }
+    .main-light-card.idle    .big-state { color: var(--green); }
+    .main-light-card.running .big-state { color: var(--yellow); }
+    .main-light-card.waiting .big-state { color: var(--orange); }
+    .main-light-card.error   .big-state { color: var(--red); }
+    .main-light-card .big-detail { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+    /* Big dot visualization */
+    .big-dot-wrap { display: flex; align-items: center; justify-content: center; padding: 28px 0; }
+    .big-dot {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: var(--gray);
+      transition: all 0.4s;
+      box-shadow: inset 0 -4px 12px rgba(0,0,0,0.3);
+    }
+    .big-dot.idle    { background: var(--green);  box-shadow: inset 0 -4px 12px rgba(0,0,0,0.3), 0 0 40px rgba(34,197,94,0.6); }
+    .big-dot.running { background: var(--yellow); box-shadow: inset 0 -4px 12px rgba(0,0,0,0.3), 0 0 40px rgba(234,179,8,0.6); animation: pulse 1.4s ease-in-out infinite; }
+    .big-dot.waiting { background: var(--orange); box-shadow: inset 0 -4px 12px rgba(0,0,0,0.3), 0 0 50px rgba(245,158,11,0.8); animation: blink 0.9s linear infinite; }
+    .big-dot.error   { background: var(--red);    box-shadow: inset 0 -4px 12px rgba(0,0,0,0.3), 0 0 60px rgba(239,68,68,0.9); animation: shake 0.4s linear infinite; }
+
+    /* 历史时间轴 */
+    .history {
+      grid-column: 2 / span 2;
+      grid-row: 2;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .history h3 { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+    .timeline {
+      display: flex; align-items: end; gap: 2px; height: 80px;
+    }
+    .timeline .tick {
+      flex: 1; min-width: 2px;
+      border-radius: 2px;
+      transition: all 0.3s;
+    }
+
+    /* 底部状态条 */
+    .footer-bar {
+      display: flex; justify-content: space-between;
+      padding-top: 12px; border-top: 1px solid var(--line);
+      font-size: 11px; color: var(--muted);
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    /* 控制条 */
+    .controls { display: flex; gap: 8px; align-items: center;
+      padding: 12px 16px; background: var(--panel);
+      border: 1px solid var(--line); border-radius: 10px; }
+    .controls .label { font-size: 12px; color: var(--muted); margin-right: 6px; }
+    .btn { background: transparent; color: var(--text);
+      border: 1px solid var(--line); padding: 6px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .btn:hover { background: rgba(255,255,255,0.04); border-color: #2a2a35; }
+    .btn.active { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; }
+    .btn .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .btn .led.idle { background: var(--green); } .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); } .btn .led.error { background: var(--red); }
+
+    .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .meta-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .meta-card .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 600; }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>形态 07 · 数据 Dashboard</h1>
+      <div class="desc">信息密度最高,工程师审美。多 agent 卡片 + sparkline + 历史时间轴 + token 统计。适合 power user。</div>
+    </div>
+    <a class="back" href="index.html">← 返回总览</a>
+  </div>
+
+  <div class="dashboard">
+    <!-- 顶部 -->
+    <div class="top-bar">
+      <div class="top-left">
+        <div class="logo">A</div>
+        <div>
+          <div class="app-name">Agent Status</div>
+          <div class="app-sub">3 agents · Up 12 hrs</div>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="kpi"><div class="k">Today Tokens</div><div class="v">128.4K</div></div>
+        <div class="kpi"><div class="k">Today Cost</div><div class="v">$2.34</div></div>
+        <div class="kpi"><div class="k">Tasks</div><div class="v">47</div></div>
+        <div class="kpi"><div class="k">Avg Latency</div><div class="v">1.2s</div></div>
+      </div>
+    </div>
+
+    <!-- 主网格 -->
+    <div class="grid">
+      <!-- 主灯卡片 -->
+      <div class="main-light-card idle" id="mainCard">
+        <div class="label">Aggregate Status</div>
+        <div class="big-state" id="bigState">IDLE</div>
+        <div class="big-detail" id="bigDetail">All 3 agents are standing by. Next event will trigger.</div>
+        <div class="big-dot-wrap">
+          <div class="big-dot idle" id="bigDot"></div>
+        </div>
+        <div style="margin-top: auto; font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace;">
+          PRIORITY: red &gt; yellow(wait) &gt; yellow(run) &gt; green
+        </div>
+      </div>
+
+      <!-- Claude -->
+      <div class="agent-card" id="cardClaude">
+        <div class="agent-head">
+          <div class="agent-id"><span class="dot idle" id="dotClaude"></span><span class="name">Claude Code</span></div>
+          <span class="agent-state idle" id="stateClaude">idle</span>
+        </div>
+        <div class="agent-task" id="taskClaude">$ idle</div>
+        <svg class="sparkline" viewBox="0 0 100 32" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#22c55e" stroke-width="1.5"
+                    points="0,28 8,25 16,20 24,22 32,15 40,18 48,10 56,12 64,8 72,14 80,16 88,12 100,18"/>
+        </svg>
+        <div class="agent-meta">
+          <span>Tokens: <span class="num">42.1K</span></span>
+          <span>Tasks: <span class="num">19</span></span>
+        </div>
+      </div>
+
+      <!-- Codex -->
+      <div class="agent-card" id="cardCodex">
+        <div class="agent-head">
+          <div class="agent-id"><span class="dot idle" id="dotCodex"></span><span class="name">Codex</span></div>
+          <span class="agent-state idle" id="stateCodex">idle</span>
+        </div>
+        <div class="agent-task" id="taskCodex">$ idle</div>
+        <svg class="sparkline" viewBox="0 0 100 32" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#a855f7" stroke-width="1.5"
+                    points="0,18 8,20 16,18 24,12 32,15 40,10 48,8 56,12 64,18 72,15 80,10 88,8 100,12"/>
+        </svg>
+        <div class="agent-meta">
+          <span>Tokens: <span class="num">38.7K</span></span>
+          <span>Tasks: <span class="num">14</span></span>
+        </div>
+      </div>
+
+      <!-- Cursor -->
+      <div class="agent-card" id="cardCursor">
+        <div class="agent-head">
+          <div class="agent-id"><span class="dot idle" id="dotCursor"></span><span class="name">Cursor</span></div>
+          <span class="agent-state idle" id="stateCursor">idle</span>
+        </div>
+        <div class="agent-task" id="taskCursor">$ idle</div>
+        <svg class="sparkline" viewBox="0 0 100 32" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#60a5fa" stroke-width="1.5"
+                    points="0,22 8,18 16,15 24,8 32,12 40,18 48,15 56,10 64,8 72,12 80,18 88,15 100,10"/>
+        </svg>
+        <div class="agent-meta">
+          <span>Tokens: <span class="num">47.6K</span></span>
+          <span>Tasks: <span class="num">14</span></span>
+        </div>
+      </div>
+
+      <!-- 历史时间轴 -->
+      <div class="history">
+        <h3>Last 60 minutes</h3>
+        <div class="timeline" id="timeline"></div>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="footer-bar">
+      <span>vibe-agent v1.0.0 · WAILS RUNTIME · 12 MB RAM</span>
+      <span>~/.claude · ~/.codex · ~/.cursor</span>
+      <span id="footerTime">2026-06-01 20:46:33</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">模拟主灯状态</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>空闲</button>
+    <button class="btn" data-state="running"><span class="led running"></span>运行中</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>等待用户</button>
+    <button class="btn" data-state="error"><span class="led error"></span>异常</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted);">自动每 3.5s 切换 · 点击按钮锁定</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card"><div class="k">截图传播力</div><div class="v">★★ / 5</div><div class="vd">信息多但缺记忆点</div></div>
+    <div class="meta-card"><div class="k">实现难度</div><div class="v">★★★ / 5</div><div class="vd">数据采集+sparkline</div></div>
+    <div class="meta-card"><div class="k">主要受众</div><div class="v">power user</div><div class="vd">追求信息密度</div></div>
+    <div class="meta-card"><div class="k">综合评分</div><div class="v">★★★ / 5</div><div class="vd">B 端/团队场景更合适</div></div>
+  </div>
+
+  <script>
+    // 时间轴(60 个柱, 不同颜色 = 不同状态)
+    const tl = document.getElementById('timeline');
+    const tlData = ['g','g','g','y','y','y','g','g','g','g','g','y','y','o','o','g','g','g','g','g','y','y','y','y','y','g','g','g','o','o','y','y','g','g','g','r','r','y','g','g','g','g','y','y','y','g','g','g','g','y','y','y','o','o','y','g','g','g','g'];
+    const tcolor = {g:'#22c55e', y:'#eab308', o:'#f59e0b', r:'#ef4444'};
+    tlData.forEach((c, i) => {
+      const t = document.createElement('div');
+      t.className = 'tick';
+      t.style.background = tcolor[c];
+      t.style.height = (12 + Math.random()*60) + 'px';
+      t.style.opacity = 0.4 + (i / tlData.length) * 0.6;
+      tl.appendChild(t);
+    });
+
+    const states = ['idle','running','waiting','error'];
+    const labelMap = { idle:'IDLE', running:'RUNNING', waiting:'AWAITING', error:'ERROR' };
+    const detailMap = {
+      idle:    'All 3 agents are standing by. Next event will trigger.',
+      running: 'Claude Code is processing read_file. ETA 18s.',
+      waiting: 'Cursor is asking permission for npm run build.',
+      error:   'Claude Code hit rate limit (429). Auto-retry 2/3.'
+    };
+    let auto = true, idx = 0;
+    function setState(s){
+      // 主灯
+      document.getElementById('mainCard').className = 'main-light-card ' + s;
+      document.getElementById('bigState').textContent = labelMap[s];
+      document.getElementById('bigDetail').textContent = detailMap[s];
+      document.getElementById('bigDot').className = 'big-dot ' + s;
+      // Claude (idle -> 跟主灯)
+      const dotC = document.getElementById('dotClaude');
+      const stateC = document.getElementById('stateClaude');
+      const taskC = document.getElementById('taskClaude');
+      const cardC = document.getElementById('cardClaude');
+      // 默认所有 agent 跟主灯, 但 Cursor 在 waiting 时单独亮
+      if (s === 'waiting') {
+        dotC.className = 'dot running'; stateC.className='agent-state running'; stateC.textContent='running';
+        taskC.textContent = '$ read_file src/server.go';
+        cardC.classList.remove('active');
+        document.getElementById('dotCursor').className = 'dot waiting';
+        document.getElementById('stateCursor').className = 'agent-state waiting';
+        document.getElementById('stateCursor').textContent = 'waiting';
+        document.getElementById('taskCursor').textContent = '? Approve `npm run build`';
+        document.getElementById('cardCursor').classList.add('active');
+      } else {
+        dotC.className = 'dot ' + s; stateC.className='agent-state ' + s; stateC.textContent = s;
+        taskC.textContent = s === 'idle' ? '$ idle' : s === 'running' ? '$ read_file src/server.go' : s === 'error' ? '! 429 rate_limit retry 2/3' : '$ idle';
+        cardC.classList.toggle('active', s === 'running' || s === 'error');
+        document.getElementById('dotCursor').className = 'dot idle';
+        document.getElementById('stateCursor').className = 'agent-state idle';
+        document.getElementById('stateCursor').textContent = 'idle';
+        document.getElementById('taskCursor').textContent = '$ idle';
+        document.getElementById('cardCursor').classList.remove('active');
+      }
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+    // 实时时钟
+    setInterval(() => {
+      const d = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      document.getElementById('footerTime').textContent =
+        `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }, 1000);
+  </script>
+</body>
+</html>

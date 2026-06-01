@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>音效素材试听 · 红绿灯主题</title>
+  <style>
+    :root {
+      --bg: #0a0a0f; --panel: #14141a; --panel-2: #1a1a22; --line: #1f1f28;
+      --text: #e5e7eb; --muted: #9ca3af; --dim: #4b5563;
+      --green: #22c55e; --yellow: #eab308; --orange: #f59e0b; --red: #ef4444;
+      --accent: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 24px;
+      background-image:
+        radial-gradient(circle at 10% 0%, rgba(168,85,247,0.05) 0, transparent 40%),
+        radial-gradient(circle at 90% 100%, rgba(34,197,94,0.04) 0, transparent 40%);
+    }
+    .container { max-width: 1240px; margin: 0 auto; width: 100%; }
+    .header {
+      text-align: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .header h1 {
+      font-size: 28px; font-weight: 700; letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+    .header .sub { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 12px; position: absolute; top: 36px; left: 36px; }
+    a.back:hover { color: var(--text); }
+
+    /* 顶部控制条 */
+    .global-bar {
+      margin-top: 30px;
+      display: flex; align-items: center; gap: 20px;
+      padding: 14px 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .global-bar .label { font-size: 12px; color: var(--muted); }
+    .global-bar input[type=range] {
+      flex: 0 0 200px;
+      accent-color: var(--accent);
+    }
+    .global-bar .vol-val {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: var(--text);
+      min-width: 50px;
+      text-align: right;
+    }
+    .first-hint {
+      color: var(--accent);
+      font-size: 12px;
+      margin-left: auto;
+      font-weight: 500;
+      animation: hintPulse 1.6s ease-in-out infinite;
+    }
+    .first-hint.hide { display: none; }
+    @keyframes hintPulse {
+      0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* 类别块 */
+    .section {
+      margin-top: 32px;
+    }
+    .section-head {
+      display: flex; align-items: baseline; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .section-head h2 {
+      font-size: 16px; font-weight: 600;
+    }
+    .section-head .tag {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .section-head .tag.waiting { background: rgba(245,158,11,0.15); color: var(--orange); }
+    .section-head .tag.error   { background: rgba(239,68,68,0.15); color: var(--red); }
+    .section-head .tag.done    { background: rgba(34,197,94,0.15); color: var(--green); }
+    .section-head .tag.real    { background: rgba(168,85,247,0.15); color: var(--accent); }
+    .section-head .note { font-size: 12px; color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    /* 音效卡片 */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex; flex-direction: column;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .card:hover {
+      border-color: rgba(168, 85, 247, 0.4);
+      transform: translateY(-2px);
+    }
+    .card.recommend {
+      border-color: rgba(168, 85, 247, 0.5);
+      box-shadow: 0 0 0 1px rgba(168,85,247,0.3);
+      background: linear-gradient(135deg, var(--panel) 0%, rgba(168,85,247,0.04) 100%);
+    }
+    .card-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .card-num {
+      font-size: 11px;
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      letter-spacing: 0.1em;
+    }
+    .recommend-badge {
+      background: var(--accent);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      min-height: 3em;
+    }
+    .params {
+      font-size: 11px;
+      color: var(--dim);
+      font-family: "JetBrains Mono", monospace;
+      padding: 8px 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+      line-height: 1.6;
+    }
+    .play-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .btn-play {
+      flex: 1;
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: inherit;
+    }
+    .btn-play:hover { background: #9333ea; transform: scale(1.02); }
+    .btn-play:active { transform: scale(0.98); }
+    .btn-play svg { width: 12px; height: 12px; }
+    .led {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .led.waiting { background: var(--orange); box-shadow: 0 0 6px rgba(245,158,11,0.6); }
+    .led.error   { background: var(--red); box-shadow: 0 0 6px rgba(239,68,68,0.6); }
+    .led.done    { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+    .led.real    { background: var(--accent); box-shadow: 0 0 6px rgba(168,85,247,0.6); }
+
+    .visualizer {
+      height: 30px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 4px;
+      margin: 4px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .visualizer::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; top: 50%;
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+    }
+    .visualizer .wave {
+      position: absolute;
+      bottom: 50%;
+      background: var(--accent);
+      width: 3px;
+      border-radius: 1px;
+      opacity: 0.6;
+    }
+
+    /* 自定义合成器 */
+    .custom-synth {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 24px;
+      margin-top: 16px;
+    }
+    .custom-synth h3 {
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .synth-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .synth-row {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .synth-row label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .synth-row input[type=range] {
+      accent-color: var(--accent);
+    }
+    .synth-row select, .synth-row .input-num {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .synth-val { color: var(--text); font-family: "JetBrains Mono", monospace; font-size: 12px; }
+
+    footer {
+      text-align: center;
+      padding: 30px 0 0;
+      color: var(--dim);
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="index.html">← 返回总览</a>
+    <div class="header">
+      <h1>音效素材试听 · 红绿灯主题</h1>
+      <div class="sub">
+        所有音效用 Web Audio API <b>实时合成</b>(0 文件,跨平台一致)。<br>
+        4 大类候选:**等待提示** / **错误警报** / **任务完成** / **真实红绿灯模拟**。
+      </div>
+    </div>
+
+    <div class="global-bar">
+      <span class="label">全局音量</span>
+      <input type="range" id="globalVol" min="0" max="100" value="30">
+      <span class="vol-val" id="volVal">30%</span>
+      <span class="label" style="margin-left:auto;">默认音量 30%(产品里用户可调)</span>
+      <span class="first-hint" id="firstHint">↑ 浏览器要求先点击页面才能播放音频,任意按一下即可</span>
+    </div>
+
+    <!-- 等待用户授权 -->
+    <div class="section">
+      <div class="section-head">
+        <h2>1. 等待用户授权(waiting)</h2>
+        <span class="tag waiting">最关键</span>
+        <span class="note">这是用户不在键盘前时最需要听到的提示,要清晰、有辨识度、不刺耳</span>
+      </div>
+      <div class="grid" id="grid-waiting"></div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="section">
+      <div class="section-head">
+        <h2>2. 错误警报(error)</h2>
+        <span class="tag error">必响</span>
+        <span class="note">沉重、低频、克制(不要太长太频繁,避免烦)</span>
+      </div>
+      <div class="grid" id="grid-error"></div>
+    </div>
+
+    <!-- 任务完成 -->
+    <div class="section">
+      <div class="section-head">
+        <h2>3. 任务完成(done)</h2>
+        <span class="tag done">默认关</span>
+        <span class="note">用户可选开启,频繁任务完成的话也会烦,所以默认静音</span>
+      </div>
+      <div class="grid" id="grid-done"></div>
+    </div>
+
+    <!-- 真实红绿灯模拟 -->
+    <div class="section">
+      <div class="section-head">
+        <h2>4. 真实红绿灯模拟</h2>
+        <span class="tag real">致敬</span>
+        <span class="note">直接复刻现实路口过街信号,跟物理灯 UI 形成视听双重一致</span>
+      </div>
+      <div class="grid" id="grid-real"></div>
+    </div>
+
+    <!-- 自定义合成器 -->
+    <div class="custom-synth">
+      <h3>自定义合成器(随便玩)</h3>
+      <div class="synth-grid">
+        <div class="synth-row">
+          <label>波形</label>
+          <select id="synth-wave">
+            <option value="square">square (方波,经典电子嘀)</option>
+            <option value="sine">sine (正弦,圆润)</option>
+            <option value="triangle">triangle (三角,中性)</option>
+            <option value="sawtooth">sawtooth (锯齿,粗糙)</option>
+          </select>
+        </div>
+        <div class="synth-row">
+          <label>频率 (Hz)</label>
+          <input type="range" id="synth-freq" min="100" max="2000" value="800" step="50">
+          <span class="synth-val" id="synth-freq-v">800 Hz</span>
+        </div>
+        <div class="synth-row">
+          <label>单声时长 (ms)</label>
+          <input type="range" id="synth-dur" min="30" max="800" value="100" step="10">
+          <span class="synth-val" id="synth-dur-v">100 ms</span>
+        </div>
+        <div class="synth-row">
+          <label>间隔 (ms)</label>
+          <input type="range" id="synth-gap" min="0" max="500" value="80" step="10">
+          <span class="synth-val" id="synth-gap-v">80 ms</span>
+        </div>
+        <div class="synth-row">
+          <label>重复次数</label>
+          <input type="range" id="synth-times" min="1" max="10" value="3" step="1">
+          <span class="synth-val" id="synth-times-v">3 次</span>
+        </div>
+        <div class="synth-row">
+          <label>音量</label>
+          <input type="range" id="synth-vol" min="0" max="100" value="50">
+          <span class="synth-val" id="synth-vol-v">50%</span>
+        </div>
+      </div>
+      <button class="btn-play" id="synth-play">
+        <svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+        播放自定义
+      </button>
+    </div>
+
+    <footer>
+      Audio Preview · Web Audio API 实时合成 · 0 文件 · 跨平台一致<br>
+      听完后告诉我你最喜欢哪几个 → 直接进 PRD
+    </footer>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    let globalVolume = 0.3;
+    document.getElementById('globalVol').addEventListener('input', e => {
+      globalVolume = e.target.value / 100;
+      document.getElementById('volVal').textContent = e.target.value + '%';
+    });
+
+    // 解锁 AudioContext(浏览器要求用户先交互)
+    document.body.addEventListener('click', () => {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        document.getElementById('firstHint').classList.add('hide');
+      }
+    }, { once: true });
+
+    // 合成一组音效:wave 类型 / 频率 / 时长 / 间隔 / 重复次数 / 音量(0-1) / 频率变化(可选,做滑音)
+    function playSequence({ wave='square', freqs=[800], duration=100, gap=80, times=1, volume=0.5, gainEnvelope='exp' }) {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const now = audioCtx.currentTime;
+      const vol = globalVolume * volume;
+      let t = now;
+      for (let i = 0; i < times; i++) {
+        const freq = freqs[i % freqs.length];
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = wave;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(vol, t + 0.005);
+        if (gainEnvelope === 'exp') {
+          gain.gain.exponentialRampToValueAtTime(0.001, t + duration / 1000);
+        } else {
+          gain.gain.setValueAtTime(vol, t + duration / 1000 - 0.01);
+          gain.gain.linearRampToValueAtTime(0, t + duration / 1000);
+        }
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + duration / 1000);
+        t += (duration + gap) / 1000;
+      }
+    }
+
+    // 滑音(用 frequency.linearRampToValueAtTime)
+    function playGlide({ wave='sine', freqStart=400, freqEnd=800, duration=300, volume=0.5 }) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = wave;
+      osc.frequency.setValueAtTime(freqStart, now);
+      osc.frequency.linearRampToValueAtTime(freqEnd, now + duration / 1000);
+      const vol = globalVolume * volume;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration / 1000);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + duration / 1000);
+    }
+
+    // 候选音效定义
+    const sounds = {
+      waiting: [
+        { id:'W1', recommend: true, title:'三声 800Hz 短促(标准电子嘀)', desc:'最经典的电子嘀,清晰但不刺耳。中文红绿灯快频参考。', params:'square · 800Hz · 100ms × 3 · 80ms 间隔', play: () => playSequence({ wave:'square', freqs:[800], duration:100, gap:80, times:3, volume:0.6 }) },
+        { id:'W2', title:'三声 1000Hz 高频(更清脆)', desc:'比 800 高一档,在嘈杂环境更突出,但夜里可能太刺耳。', params:'square · 1000Hz · 100ms × 3 · 80ms', play: () => playSequence({ wave:'square', freqs:[1000], duration:100, gap:80, times:3, volume:0.6 }) },
+        { id:'W3', title:'五声 600Hz 中频(柔和)', desc:'更低更柔,办公室友好。注意:重复次数多,可能被嫌烦。', params:'square · 600Hz · 80ms × 5 · 60ms', play: () => playSequence({ wave:'square', freqs:[600], duration:80, gap:60, times:5, volume:0.5 }) },
+        { id:'W4', title:'"嘟嘀嘀" 摩斯码风', desc:'1 长 + 2 短,有节奏感,程序员可能爱。', params:'square · 800Hz · 250ms + 100ms + 100ms', play: () => { playSequence({ wave:'square', freqs:[800], duration:250, gap:120, times:1, volume:0.5 }); setTimeout(() => playSequence({ wave:'square', freqs:[800], duration:100, gap:80, times:2, volume:0.5 }), 400); } },
+        { id:'W5', title:'上升 Skype 来电式', desc:'三声向上 800→1000→1200,温和但醒目,像 Skype 来电。', params:'sine · 800/1000/1200 · 120ms × 3', play: () => playSequence({ wave:'sine', freqs:[800, 1000, 1200], duration:120, gap:60, times:3, volume:0.6 }) },
+        { id:'W6', title:'双声 1200Hz 圆润', desc:'sine 波双声,圆润干净,适合现代极简风。', params:'sine · 1200Hz · 150ms × 2 · 100ms', play: () => playSequence({ wave:'sine', freqs:[1200], duration:150, gap:100, times:2, volume:0.6 }) },
+      ],
+      error: [
+        { id:'E1', recommend: true, title:'一声 400Hz 长嘟(标准低频)', desc:'红灯禁行参考音,沉重克制。最经典的"出错了"提示。', params:'square · 400Hz · 350ms × 1', play: () => playSequence({ wave:'square', freqs:[400], duration:350, gap:0, times:1, volume:0.6 }) },
+        { id:'E2', title:'双声 350Hz 警报', desc:'双声警报,像车祸提示。略重,适合严重 error。', params:'square · 350Hz · 200ms × 2 · 100ms', play: () => playSequence({ wave:'square', freqs:[350], duration:200, gap:100, times:2, volume:0.7 }) },
+        { id:'E3', title:'下降 600→200 滑音(沮丧感)', desc:'频率从 600 滑到 200,像"哎"的下降语调。', params:'sine · 600 → 200Hz · 500ms 滑音', play: () => playGlide({ wave:'sine', freqStart:600, freqEnd:200, duration:500, volume:0.6 }) },
+        { id:'E4', title:'三声急促 500Hz(红灯禁行)', desc:'中频快速三声,有紧迫感,适合 API 限流类。', params:'square · 500Hz · 80ms × 3 · 50ms', play: () => playSequence({ wave:'square', freqs:[500], duration:80, gap:50, times:3, volume:0.7 }) },
+        { id:'E5', title:'低频锯齿声(机械故障)', desc:'sawtooth 波,粗糙感,像老式电脑报警。', params:'sawtooth · 300Hz · 400ms × 1', play: () => playSequence({ wave:'sawtooth', freqs:[300], duration:400, gap:0, times:1, volume:0.5 }) },
+      ],
+      done: [
+        { id:'D1', recommend: true, title:'"叮咚" 上行 C-E-G', desc:'像 iMessage 收消息,积极轻快。建议默认关,频繁会烦。', params:'sine · 523/659/784Hz · 80ms × 3 · 30ms', play: () => playSequence({ wave:'sine', freqs:[523.25, 659.25, 783.99], duration:80, gap:30, times:3, volume:0.5 }) },
+        { id:'D2', title:'一声 1500Hz 清脆铃', desc:'最简单的"叮",像 macOS Glass 提示。', params:'sine · 1500Hz · 200ms × 1', play: () => playSequence({ wave:'sine', freqs:[1500], duration:200, gap:0, times:1, volume:0.5 }) },
+        { id:'D3', title:'木琴风短调', desc:'三角波模拟木琴,像 Material Design 的成功音。', params:'triangle · 700/900/1100Hz · 60ms × 3', play: () => playSequence({ wave:'triangle', freqs:[700, 900, 1100], duration:60, gap:30, times:3, volume:0.5 }) },
+        { id:'D4', title:'上升 4 音阶(欢快)', desc:'C-E-G-C 完整三和弦上行,庆祝感强。可能过于喜庆。', params:'sine · 523/659/784/1047Hz', play: () => playSequence({ wave:'sine', freqs:[523.25, 659.25, 783.99, 1046.5], duration:80, gap:25, times:4, volume:0.5 }) },
+      ],
+      real: [
+        { id:'R1', recommend: true, title:'中国式过街绿灯(视障引导)', desc:'快频高音,模拟"嘀嘀嘀嘀嘀嘀嘀"通行音。建议**只用其中 3 声**作 waiting。', params:'square · 1500Hz · 50ms × 7 · 80ms', play: () => playSequence({ wave:'square', freqs:[1500], duration:50, gap:80, times:7, volume:0.5 }) },
+        { id:'R2', title:'中国式过街红灯', desc:'低频慢节奏"嘟……嘟……嘟……",经典禁行提示。', params:'sine · 300Hz · 300ms × 3 · 400ms', play: () => playSequence({ wave:'sine', freqs:[300], duration:300, gap:400, times:3, volume:0.5 }) },
+        { id:'R3', title:'日本式 Cuckoo 杜鹃叫', desc:'两声 down-up,日本部分路口用,温柔可爱。', params:'sine · 700/600Hz 滑动 × 2', play: () => { playGlide({ wave:'sine', freqStart:700, freqEnd:600, duration:300, volume:0.5 }); setTimeout(() => playGlide({ wave:'sine', freqStart:700, freqEnd:600, duration:300, volume:0.5 }), 500); } },
+        { id:'R4', title:'美国式 Chirp 鸟叫', desc:'快速上升再下降,模拟鸟叫,部分美国路口用。', params:'sine · 1800 → 2200 → 1800Hz', play: () => { playGlide({ wave:'sine', freqStart:1800, freqEnd:2400, duration:80, volume:0.5 }); setTimeout(() => playGlide({ wave:'sine', freqStart:2400, freqEnd:1800, duration:80, volume:0.5 }), 100); } },
+        { id:'R5', title:'欧式 Beep-Beep 中频', desc:'欧洲常见,中频两声,稳重。', params:'square · 900Hz · 200ms × 2 · 200ms', play: () => playSequence({ wave:'square', freqs:[900], duration:200, gap:200, times:2, volume:0.6 }) },
+      ]
+    };
+
+    function renderGrid(key, ledClass) {
+      const grid = document.getElementById('grid-' + key);
+      sounds[key].forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'card' + (s.recommend ? ' recommend' : '');
+        card.innerHTML = `
+          <div class="card-head">
+            <div>
+              <div class="card-num">${s.id}</div>
+              <div class="card-title">${s.title}</div>
+            </div>
+            ${s.recommend ? '<span class="recommend-badge">推荐</span>' : ''}
+          </div>
+          <div class="card-desc">${s.desc}</div>
+          <div class="params">${s.params}</div>
+          <div class="play-row">
+            <button class="btn-play" data-id="${s.id}">
+              <svg viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+              播放
+            </button>
+            <div class="led ${ledClass}"></div>
+          </div>
+        `;
+        card.querySelector('.btn-play').addEventListener('click', s.play);
+        grid.appendChild(card);
+      });
+    }
+    renderGrid('waiting', 'waiting');
+    renderGrid('error', 'error');
+    renderGrid('done', 'done');
+    renderGrid('real', 'real');
+
+    // 自定义合成器
+    const syncSynth = () => {
+      document.getElementById('synth-freq-v').textContent = document.getElementById('synth-freq').value + ' Hz';
+      document.getElementById('synth-dur-v').textContent = document.getElementById('synth-dur').value + ' ms';
+      document.getElementById('synth-gap-v').textContent = document.getElementById('synth-gap').value + ' ms';
+      document.getElementById('synth-times-v').textContent = document.getElementById('synth-times').value + ' 次';
+      document.getElementById('synth-vol-v').textContent = document.getElementById('synth-vol').value + '%';
+    };
+    ['freq','dur','gap','times','vol'].forEach(k => document.getElementById('synth-'+k).addEventListener('input', syncSynth));
+    syncSynth();
+    document.getElementById('synth-play').addEventListener('click', () => {
+      playSequence({
+        wave: document.getElementById('synth-wave').value,
+        freqs: [parseInt(document.getElementById('synth-freq').value)],
+        duration: parseInt(document.getElementById('synth-dur').value),
+        gap: parseInt(document.getElementById('synth-gap').value),
+        times: parseInt(document.getElementById('synth-times').value),
+        volume: parseInt(document.getElementById('synth-vol').value) / 100
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 02 · 桌面浮动状态灯</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --panel: #14141a;
+      --line: #1f1f28;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --dim: #4b5563;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --gray: #6b7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: var(--text); }
+
+    /* Stage = 模拟桌面 */
+    .stage {
+      flex: 1;
+      min-height: 480px;
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #1c1d22;
+      background-image:
+        linear-gradient(135deg, #1a1c22 0%, #14171c 50%, #0e1015 100%);
+      border: 1px solid var(--line);
+    }
+    /* 模拟 IDE 窗口(背景) */
+    .ide-window {
+      position: absolute;
+      top: 40px;
+      left: 40px;
+      right: 40px;
+      bottom: 40px;
+      background: rgba(20, 22, 28, 0.7);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .ide-titlebar {
+      height: 32px;
+      background: rgba(30,32,40,0.6);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .traffic { width: 12px; height: 12px; border-radius: 50%; }
+    .traffic.r { background: #ed6a5e; }
+    .traffic.y { background: #f5bf4f; }
+    .traffic.g { background: #61c554; }
+    .ide-title { margin-left: 8px; }
+    .ide-body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+    }
+    .ide-sidebar {
+      background: rgba(0,0,0,0.15);
+      border-right: 1px solid rgba(255,255,255,0.04);
+      padding: 12px 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .file-tree-item {
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+    }
+    .file-tree-item.active { background: rgba(168,85,247,0.12); color: white; }
+    .ide-editor {
+      padding: 16px 18px;
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #cbd5e1;
+      overflow: hidden;
+    }
+    .editor-line { white-space: nowrap; }
+    .editor-line .kw { color: #c084fc; }
+    .editor-line .str { color: #86efac; }
+    .editor-line .fn { color: #93c5fd; }
+    .editor-line .com { color: #6b7280; font-style: italic; }
+    .editor-line .num { color: #fcd34d; }
+
+    /* 浮动状态灯本体 */
+    .float-light {
+      position: absolute;
+      right: 80px;
+      bottom: 80px;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #2c2e36, #1a1c22 60%, #0e1015 100%);
+      box-shadow:
+        0 10px 30px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -2px 6px rgba(0,0,0,0.6);
+      display: grid;
+      place-items: center;
+      cursor: grab;
+      transition: transform 0.2s;
+      user-select: none;
+    }
+    .float-light:hover { transform: translateY(-2px); }
+    .float-light .lamp {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--gray);
+      box-shadow:
+        inset 0 -3px 8px rgba(0,0,0,0.4),
+        inset 0 2px 4px rgba(255,255,255,0.15);
+      transition: all 0.4s;
+      position: relative;
+    }
+    /* 灯泡内部高光 */
+    .float-light .lamp::after {
+      content: '';
+      position: absolute;
+      top: 18%;
+      left: 22%;
+      width: 30%;
+      height: 22%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.45), transparent);
+      pointer-events: none;
+    }
+    .float-light.idle .lamp     { background: var(--green);  box-shadow: inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2), 0 0 24px rgba(34,197,94,0.55); }
+    .float-light.running .lamp  { background: var(--yellow); box-shadow: inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2), 0 0 28px rgba(234,179,8,0.6); animation: lamp-pulse 1.4s ease-in-out infinite; }
+    .float-light.waiting .lamp  { background: var(--orange); box-shadow: inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2), 0 0 32px rgba(245,158,11,0.75); animation: lamp-blink 0.9s linear infinite; }
+    .float-light.error .lamp    { background: var(--red);    box-shadow: inset 0 -3px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2), 0 0 36px rgba(239,68,68,0.85); animation: lamp-shake 0.4s linear infinite; }
+    @keyframes lamp-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @keyframes lamp-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+    @keyframes lamp-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-1px); } 75% { transform: translateX(1px); } }
+
+    /* 灯下方的迷你 badge */
+    .float-light .agent-count {
+      position: absolute;
+      right: -4px;
+      top: -4px;
+      background: #14141a;
+      color: var(--text);
+      border: 2px solid #0a0a0f;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* Tooltip (悬停常显) */
+    .tooltip {
+      position: absolute;
+      right: 200px;
+      bottom: 100px;
+      background: rgba(28, 28, 36, 0.95);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      min-width: 240px;
+    }
+    .tooltip .arrow {
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      width: 12px; height: 12px;
+      background: rgba(28,28,36,0.95);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      transform: translateY(-50%) rotate(45deg);
+    }
+    .tooltip .t-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tooltip .t-title .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .tooltip .t-title .dot.idle    { background: var(--green); }
+    .tooltip .t-title .dot.running { background: var(--yellow); }
+    .tooltip .t-title .dot.waiting { background: var(--orange); }
+    .tooltip .t-title .dot.error   { background: var(--red); }
+    .tooltip .t-desc {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .tooltip .t-meta {
+      margin-top: 6px;
+      font-size: 10px;
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Controls (同 01) */
+    .controls {
+      display: flex; gap: 8px; align-items: center;
+      padding: 12px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .controls .label { font-size: 12px; color: var(--muted); margin-right: 6px; }
+    .btn {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--line);
+      padding: 6px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s;
+      font-family: inherit;
+    }
+    .btn:hover { background: rgba(255,255,255,0.04); border-color: #2a2a35; }
+    .btn.active { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; }
+    .btn .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .btn .led.idle    { background: var(--green); }
+    .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); }
+    .btn .led.error   { background: var(--red); }
+
+    .meta {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .meta-card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .meta-card .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 600; }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>形态 02 · 桌面浮动状态灯</h1>
+      <div class="desc">一颗可拖动、常驻屏幕的发光小球。物理质感(磨砂 + 玻璃罩),不是漂浮光球。Hover 出 tooltip,点击展开。</div>
+    </div>
+    <a class="back" href="index.html">← 返回总览</a>
+  </div>
+
+  <div class="stage">
+    <div class="ide-window">
+      <div class="ide-titlebar">
+        <span class="traffic r"></span>
+        <span class="traffic y"></span>
+        <span class="traffic g"></span>
+        <span class="ide-title">cursor — backend/adapters/claude.go</span>
+      </div>
+      <div class="ide-body">
+        <div class="ide-sidebar">
+          <div class="file-tree-item">▼ backend</div>
+          <div class="file-tree-item" style="padding-left:24px;">▼ adapters</div>
+          <div class="file-tree-item active" style="padding-left:36px;">claude.go</div>
+          <div class="file-tree-item" style="padding-left:36px;">codex.go</div>
+          <div class="file-tree-item" style="padding-left:36px;">cursor.go</div>
+          <div class="file-tree-item" style="padding-left:24px;">aggregator/</div>
+          <div class="file-tree-item" style="padding-left:24px;">notify/</div>
+          <div class="file-tree-item">main.go</div>
+        </div>
+        <div class="ide-editor">
+          <div class="editor-line"><span class="kw">package</span> adapters</div>
+          <div class="editor-line"></div>
+          <div class="editor-line"><span class="kw">import</span> (</div>
+          <div class="editor-line">  <span class="str">"context"</span></div>
+          <div class="editor-line">  <span class="str">"os"</span></div>
+          <div class="editor-line">  <span class="str">"path/filepath"</span></div>
+          <div class="editor-line">  <span class="str">"github.com/fsnotify/fsnotify"</span></div>
+          <div class="editor-line">)</div>
+          <div class="editor-line"></div>
+          <div class="editor-line"><span class="com">// ClaudeAdapter 监听 ~/.claude/todos 与 ~/.claude/projects</span></div>
+          <div class="editor-line"><span class="kw">type</span> <span class="fn">ClaudeAdapter</span> <span class="kw">struct</span> {</div>
+          <div class="editor-line">  watcher *fsnotify.Watcher</div>
+          <div class="editor-line">  emitter chan<- Event</div>
+          <div class="editor-line">}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 浮动状态灯 -->
+    <div class="float-light idle" id="lamp">
+      <div class="lamp"></div>
+      <div class="agent-count">3</div>
+    </div>
+
+    <!-- 悬停 tooltip -->
+    <div class="tooltip">
+      <div class="t-title">
+        <span class="dot" id="tipDot"></span>
+        <span id="tipTitle">空闲</span>
+      </div>
+      <div class="t-desc" id="tipDesc">3 agents 都待命中,可以发新任务。</div>
+      <div class="t-meta" id="tipMeta">最后更新 · just now</div>
+      <div class="arrow"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">模拟主灯状态</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>空闲</button>
+    <button class="btn" data-state="running"><span class="led running"></span>运行中</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>等待用户</button>
+    <button class="btn" data-state="error"><span class="led error"></span>异常</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted);">自动每 3.5s 切换 · 点击按钮锁定</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card">
+      <div class="k">截图传播力</div>
+      <div class="v">★★★ / 5</div>
+      <div class="vd">物理质感真实,但视觉锚点小</div>
+    </div>
+    <div class="meta-card">
+      <div class="k">实现难度</div>
+      <div class="v">★★ / 5</div>
+      <div class="vd">透明可拖窗 + CSS 动画</div>
+    </div>
+    <div class="meta-card">
+      <div class="k">主要受众</div>
+      <div class="v">折中派</div>
+      <div class="vd">想看到状态但不想被打扰</div>
+    </div>
+    <div class="meta-card">
+      <div class="k">综合评分</div>
+      <div class="v">★★★★ / 5</div>
+      <div class="vd">实用性最高,但缺新意</div>
+    </div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const data = {
+      idle:    { title: '空闲',         desc: '3 agents 都待命中,可以发新任务。',  meta: '最后更新 · just now' },
+      running: { title: '运行中',       desc: 'Claude Code 正在 read_file src/server.go,已用时 12s。', meta: 'in progress · 12s' },
+      waiting: { title: '等待你授权',   desc: 'Cursor 想执行 npm run build,等待你 Approve / Deny。', meta: 'pending · 3s' },
+      error:   { title: 'API 限流 429', desc: 'Claude Code 触发 rate limit,自动重试中(2/3)。',  meta: 'failed · just now' }
+    };
+    let auto = true, idx = 0;
+    function setState(s){
+      document.getElementById('lamp').className = 'float-light ' + s;
+      document.getElementById('tipDot').className = 'dot ' + s;
+      document.getElementById('tipTitle').textContent = data[s].title;
+      document.getElementById('tipDesc').textContent = data[s].desc;
+      document.getElementById('tipMeta').textContent = data[s].meta;
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+  </script>
+</body>
+</html>

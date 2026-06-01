@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 03 · 物理灯模拟(交通信号灯)</title>
+  <style>
+    :root {
+      --bg: #0a0a0f; --panel: #14141a; --line: #1f1f28;
+      --text: #e5e7eb; --muted: #9ca3af; --dim: #4b5563;
+      --green: #22c55e; --yellow: #eab308; --orange: #f59e0b; --red: #ef4444; --gray: #6b7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 24px; }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header h1 { font-size: 22px; font-weight: 600; }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: var(--text); }
+    .stage { flex: 1; min-height: 480px;
+      background: radial-gradient(ellipse at center, #1e2028 0%, #0a0a0f 70%);
+      border: 1px solid var(--line); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; gap: 60px;
+      padding: 40px; }
+
+    /* 交通信号灯主体 */
+    .traffic-light {
+      width: 160px; padding: 16px 14px;
+      background: linear-gradient(180deg, #2a2c34 0%, #1a1c22 100%);
+      border-radius: 24px;
+      box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.08),
+        inset 0 -3px 6px rgba(0,0,0,0.5),
+        0 30px 60px rgba(0,0,0,0.6),
+        0 10px 20px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.05);
+      display: flex; flex-direction: column; gap: 14px; align-items: center;
+      position: relative;
+    }
+    /* 顶部安装柱 */
+    .traffic-light::before {
+      content: ''; position: absolute; top: -36px; left: 50%; transform: translateX(-50%);
+      width: 16px; height: 36px;
+      background: linear-gradient(180deg, #1a1c22, #2a2c34);
+      border-radius: 4px 4px 0 0;
+    }
+    /* 底部铭牌 */
+    .traffic-light::after {
+      content: 'AGENT v1.0'; position: absolute; bottom: -24px;
+      font-size: 9px; letter-spacing: 0.2em; color: var(--dim);
+    }
+    .bulb {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: #0a0a0d;
+      box-shadow:
+        inset 0 4px 10px rgba(0,0,0,0.8),
+        inset 0 -2px 4px rgba(255,255,255,0.04),
+        0 0 0 6px rgba(0,0,0,0.4);
+      position: relative;
+      transition: all 0.4s;
+    }
+    /* 灯内的真实高光(亮起来时显示) */
+    .bulb::after {
+      content: ''; position: absolute;
+      top: 18%; left: 22%; width: 35%; height: 25%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,255,255,0.45), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .bulb.on::after { opacity: 1; }
+    .bulb.red-on    { background: var(--red);    box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 0 40px rgba(239,68,68,0.85), 0 0 90px rgba(239,68,68,0.4); }
+    .bulb.yellow-on { background: var(--orange); box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 0 40px rgba(245,158,11,0.85), 0 0 90px rgba(245,158,11,0.4); }
+    .bulb.green-on  { background: var(--green);  box-shadow: inset 0 4px 8px rgba(0,0,0,0.5), 0 0 40px rgba(34,197,94,0.85), 0 0 90px rgba(34,197,94,0.4); }
+    .bulb.running   { animation: bulb-pulse 1.4s ease-in-out infinite; }
+    .bulb.waiting   { animation: bulb-blink 0.9s linear infinite; }
+    @keyframes bulb-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes bulb-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* 右侧状态说明 */
+    .side-panel {
+      width: 360px;
+      background: rgba(20,22,28,0.7);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 22px;
+      backdrop-filter: blur(20px);
+    }
+    .side-panel .state-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .side-panel .state-row:last-child { border-bottom: 0; }
+    .side-panel .state-row .ic { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .side-panel .state-row.idle    .ic { background: var(--green); }
+    .side-panel .state-row.running .ic { background: var(--orange); }
+    .side-panel .state-row.waiting .ic { background: var(--orange); }
+    .side-panel .state-row.error   .ic { background: var(--red); }
+    .side-panel .state-row.active { font-weight: 600; }
+    .side-panel .state-row.active .label { color: white; }
+    .side-panel .state-row .label { color: var(--muted); font-size: 13px; flex: 1; }
+    .side-panel .state-row .desc { color: var(--dim); font-size: 11px; }
+    .side-panel h3 {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px; font-weight: 500;
+    }
+    .side-panel .now {
+      font-size: 17px; font-weight: 600; margin-bottom: 16px;
+    }
+
+    /* 控制条 (同) */
+    .controls { display: flex; gap: 8px; align-items: center;
+      padding: 12px 16px; background: var(--panel);
+      border: 1px solid var(--line); border-radius: 10px; }
+    .controls .label { font-size: 12px; color: var(--muted); margin-right: 6px; }
+    .btn { background: transparent; color: var(--text);
+      border: 1px solid var(--line); padding: 6px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .btn:hover { background: rgba(255,255,255,0.04); border-color: #2a2a35; }
+    .btn.active { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; }
+    .btn .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .btn .led.idle { background: var(--green); } .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); } .btn .led.error { background: var(--red); }
+
+    .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .meta-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .meta-card .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 600; }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>形态 03 · 物理灯模拟(交通信号灯)</h1>
+      <div class="desc">致敬 JasonLam08 硬件版,纯软件实现仿真三色灯。金属壳 + 真实发光 + 余晖,程序员怀旧感。</div>
+    </div>
+    <a class="back" href="index.html">← 返回总览</a>
+  </div>
+
+  <div class="stage">
+    <!-- 信号灯本体 -->
+    <div class="traffic-light">
+      <div class="bulb" id="bulbRed"></div>
+      <div class="bulb" id="bulbYellow"></div>
+      <div class="bulb" id="bulbGreen"></div>
+    </div>
+
+    <!-- 右侧 -->
+    <div class="side-panel">
+      <h3>当前状态</h3>
+      <div class="now" id="now">空闲</div>
+      <div class="state-row idle">
+        <span class="ic"></span>
+        <span class="label">绿灯 · 空闲</span>
+        <span class="desc">all agents standby</span>
+      </div>
+      <div class="state-row running">
+        <span class="ic"></span>
+        <span class="label">黄灯慢闪 · 运行中</span>
+        <span class="desc">agent is thinking</span>
+      </div>
+      <div class="state-row waiting">
+        <span class="ic"></span>
+        <span class="label">黄灯快闪 · 等待用户</span>
+        <span class="desc">permission needed</span>
+      </div>
+      <div class="state-row error">
+        <span class="ic"></span>
+        <span class="label">红灯常亮 · 异常</span>
+        <span class="desc">failed / blocked</span>
+      </div>
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: var(--dim);">
+        Claude Code · Codex · Cursor 三 agent 聚合<br>
+        优先级:红 &gt; 黄(等待) &gt; 黄(运行) &gt; 绿
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">模拟主灯状态</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>空闲</button>
+    <button class="btn" data-state="running"><span class="led running"></span>运行中</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>等待用户</button>
+    <button class="btn" data-state="error"><span class="led error"></span>异常</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted);">自动每 3.5s 切换 · 点击按钮锁定</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card"><div class="k">截图传播力</div><div class="v">★★★★ / 5</div><div class="vd">致敬硬件版,程序员爱</div></div>
+    <div class="meta-card"><div class="k">实现难度</div><div class="v">★★★ / 5</div><div class="vd">需要做真实发光质感</div></div>
+    <div class="meta-card"><div class="k">主要受众</div><div class="v">极客 + 怀旧</div><div class="vd">喜欢硬件感的程序员</div></div>
+    <div class="meta-card"><div class="k">综合评分</div><div class="v">★★★★ / 5</div><div class="vd">视觉强,但缺新意</div></div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const stateNow = { idle:'绿灯常亮 · 空闲', running:'黄灯慢闪 · 运行中', waiting:'黄灯快闪 · 等待你授权', error:'红灯常亮 · API 限流 429' };
+    let auto = true, idx = 0;
+    function setState(s){
+      const r = document.getElementById('bulbRed');
+      const y = document.getElementById('bulbYellow');
+      const g = document.getElementById('bulbGreen');
+      r.className = 'bulb'; y.className = 'bulb'; g.className = 'bulb';
+      if (s === 'idle')    g.className = 'bulb on green-on';
+      if (s === 'running') y.className = 'bulb on yellow-on running';
+      if (s === 'waiting') y.className = 'bulb on yellow-on waiting';
+      if (s === 'error')   r.className = 'bulb on red-on';
+      document.getElementById('now').textContent = stateNow[s];
+      document.querySelectorAll('.side-panel .state-row').forEach(r => r.classList.remove('active'));
+      document.querySelector('.side-panel .state-row.' + s).classList.add('active');
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+  </script>
+</body>
+</html>

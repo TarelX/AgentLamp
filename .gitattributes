@@ -1,0 +1,45 @@
+# Default: normalize text files to LF on commit, OS-native on checkout
+* text=auto eol=lf
+
+# Cross-platform shell / build scripts must stay LF
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.go        text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+*.md        text eol=lf
+LICENSE     text eol=lf
+
+# Windows-specific files keep CRLF
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+
+# Binary assets
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.icns      binary
+*.car       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+*.zip       binary
+*.tar       binary
+*.gz        binary
+
+# Linguist hints (GitHub language stats)
+ui/*.html               linguist-vendored=false
+ui/*.html               linguist-documentation=true
+*.md                    linguist-detectable=true

@@ -1,0 +1,56 @@
+# --- Wails / Task ---
+.task
+bin
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+
+# --- Frontend ---
+frontend/dist
+frontend/node_modules
+frontend/bindings
+frontend/.vite
+frontend/.cache
+*.tsbuildinfo
+
+# --- Go ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# --- IDE / Editor ---
+.idea/
+.vscode/
+*.code-workspace
+*.iml
+.cursor/
+.cursorignore.local
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Logs / temp ---
+*.log
+*.tmp
+*.bak
+*.pid
+
+# --- Local env ---
+.env
+.env.local
+.env.*.local
+
+# --- AgentLamp temp ---
+_wails_probe/
+_scratch/
+
+# --- 内部资料 (本地保留, 不入 GitHub) ---
+AI-Agent-StatusLight-prd.md
+AgentLamp-开发启动提示词.md

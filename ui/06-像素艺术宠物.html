@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 06 · 像素艺术宠物</title>
+  <style>
+    :root {
+      --bg: #0f380f; --bg2: #306230;
+      --pixel-1: #0f380f; --pixel-2: #306230; --pixel-3: #8bac0f; --pixel-4: #9bbc0f;
+      --green: #22c55e; --yellow: #eab308; --orange: #f59e0b; --red: #ef4444;
+      --text: #cce8cc; --muted: #88aa88; --dim: #557755;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px "Courier New", "PingFang SC", monospace;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 24px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header h1 { font-size: 22px; font-weight: 700; color: var(--pixel-4); letter-spacing: 0.05em; font-family: "Press Start 2P", "Courier New", monospace; }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--pixel-4); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: white; }
+
+    /* Game Boy 风格 stage */
+    .gameboy {
+      flex: 1; min-height: 480px;
+      background:
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 3px),
+        var(--pixel-4);
+      border: 4px solid var(--pixel-1);
+      box-shadow:
+        inset 0 0 0 2px var(--pixel-2),
+        0 12px 0 var(--pixel-1),
+        0 14px 30px rgba(0,0,0,0.5);
+      border-radius: 6px;
+      padding: 24px;
+      display: flex; align-items: center; justify-content: center; gap: 50px;
+      position: relative;
+    }
+    .gameboy::before {
+      content: 'AGENT BOY · v1.0';
+      position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; color: var(--pixel-1); letter-spacing: 0.2em;
+    }
+
+    /* 像素宠物本体(用 SVG 网格) */
+    .pet {
+      width: 240px; height: 240px;
+      background: var(--pixel-3);
+      border: 3px solid var(--pixel-1);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 0 2px var(--pixel-2);
+    }
+    .pet svg {
+      image-rendering: pixelated;
+    }
+
+    /* 信息侧栏 */
+    .info {
+      width: 280px;
+      background: var(--pixel-3);
+      border: 3px solid var(--pixel-1);
+      padding: 14px;
+      box-shadow: inset 0 0 0 2px var(--pixel-2);
+    }
+    .info h3 {
+      font-size: 12px; color: var(--pixel-1);
+      letter-spacing: 0.15em; margin-bottom: 10px;
+      border-bottom: 2px solid var(--pixel-1);
+      padding-bottom: 6px;
+    }
+    .info .state-now {
+      font-size: 18px; font-weight: 700; color: var(--pixel-1);
+      margin-bottom: 14px;
+      font-family: "Press Start 2P", "Courier New", monospace;
+    }
+    .stat-row {
+      display: flex; justify-content: space-between; padding: 4px 0;
+      font-size: 12px; color: var(--pixel-1);
+      border-bottom: 1px dashed var(--pixel-2);
+    }
+    .stat-row:last-child { border-bottom: 0; }
+    .stat-row b { font-weight: 700; }
+    /* HP 条 */
+    .bar { width: 100%; height: 12px; background: var(--pixel-1); margin-top: 4px; position: relative; }
+    .bar .fill { height: 100%; background: var(--pixel-4); transition: width 0.4s; }
+
+    /* 控制条 */
+    .controls { display: flex; gap: 8px; align-items: center;
+      padding: 12px 16px; background: var(--pixel-3);
+      border: 3px solid var(--pixel-1); }
+    .controls .label { font-size: 11px; color: var(--pixel-1); margin-right: 6px; font-weight: 700; letter-spacing: 0.1em; }
+    .btn { background: var(--pixel-2); color: var(--pixel-4);
+      border: 2px solid var(--pixel-1); padding: 8px 14px;
+      font-size: 11px; cursor: pointer; transition: all 0.1s;
+      font-family: inherit; letter-spacing: 0.05em; font-weight: 700;
+      box-shadow: 2px 2px 0 var(--pixel-1); }
+    .btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--pixel-1); }
+    .btn:active { transform: translate(2px,2px); box-shadow: 0 0 0 var(--pixel-1); }
+    .btn.active { background: var(--pixel-4); color: var(--pixel-1); }
+    .btn .led { display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: middle; }
+    .btn .led.idle { background: var(--green); }
+    .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); }
+    .btn .led.error { background: var(--red); }
+
+    .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .meta-card { background: var(--pixel-3); border: 3px solid var(--pixel-1); padding: 12px 14px; }
+    .meta-card .k { font-size: 10px; color: var(--pixel-1); letter-spacing: 0.1em; }
+    .meta-card .v { font-size: 14px; margin-top: 4px; font-weight: 700; color: var(--pixel-1); }
+    .meta-card .vd { font-size: 10px; color: var(--pixel-2); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>FORM_06 ::: PIXEL_PET</h1>
+      <div class="desc">8-bit Game Boy 风格,程序员怀旧体质。状态映射到 sprite 动作。Press Start 2P 字体最佳。</div>
+    </div>
+    <a class="back" href="index.html">[← BACK]</a>
+  </div>
+
+  <div class="gameboy">
+    <!-- 像素宠物 SVG -->
+    <div class="pet">
+      <svg width="200" height="200" viewBox="0 0 16 16" id="petSvg" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated;">
+        <!-- 默认 idle 状态: 站立笑脸 -->
+        <!-- 身体外框 -->
+        <rect x="4" y="3" width="8" height="9" fill="#0f380f"/>
+        <!-- 身体填充 -->
+        <rect x="5" y="4" width="6" height="7" fill="#9bbc0f"/>
+        <!-- 眼睛 -->
+        <rect id="eyeL" x="6" y="6" width="1" height="1" fill="#0f380f"/>
+        <rect id="eyeR" x="9" y="6" width="1" height="1" fill="#0f380f"/>
+        <!-- 嘴 -->
+        <rect id="mouth1" x="7" y="8" width="2" height="1" fill="#0f380f"/>
+        <!-- 脚 -->
+        <rect x="5" y="12" width="2" height="1" fill="#0f380f"/>
+        <rect x="9" y="12" width="2" height="1" fill="#0f380f"/>
+        <!-- 状态光环(头顶) -->
+        <rect id="halo" x="6" y="1" width="4" height="1" fill="#4ade80"/>
+      </svg>
+    </div>
+
+    <div class="info">
+      <h3>SYSTEM</h3>
+      <div class="state-now" id="stateNow">IDLE</div>
+      <div class="stat-row"><span>HP</span> <span id="hpVal">100/100</span></div>
+      <div class="bar"><div class="fill" id="hpBar" style="width:100%;"></div></div>
+      <div class="stat-row" style="margin-top:14px;"><span>AGENT</span> <b id="agentName">all standby</b></div>
+      <div class="stat-row"><span>STATE</span> <b id="stateDetail">just now</b></div>
+      <div class="stat-row"><span>TOKEN</span> <b>1.2K</b></div>
+      <div class="stat-row"><span>SESSION</span> <b>00:12:34</b></div>
+      <div style="margin-top: 18px; padding-top: 12px; border-top: 2px solid var(--pixel-1); font-size: 11px; color: var(--pixel-1); letter-spacing: 0.1em;">
+        > PRESS [A] TO INTERACT<br>
+        > PRESS [B] TO DISMISS
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">SIM_STATE:</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>IDLE</button>
+    <button class="btn" data-state="running"><span class="led running"></span>WORKING</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>AWAIT</button>
+    <button class="btn" data-state="error"><span class="led error"></span>ERROR</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--pixel-1);">// auto 3.5s · click to lock</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card"><div class="k">SHARE</div><div class="v">★★★★ / 5</div><div class="vd">怀旧效应强</div></div>
+    <div class="meta-card"><div class="k">COST</div><div class="v">★★★ / 5</div><div class="vd">像素 sprite 易做</div></div>
+    <div class="meta-card"><div class="k">AUDIENCE</div><div class="v">游戏怀旧派</div><div class="vd">90后程序员爱</div></div>
+    <div class="meta-card"><div class="k">OVERALL</div><div class="v">★★★★ / 5</div><div class="vd">独特,但受众有限</div></div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const data = {
+      idle:    { now:'IDLE', agent:'all standby',  detail:'just now',  hp:'100/100', hpw:'100%', halo:'#4ade80',
+                 sprite: { eye:[[6,6],[9,6]], mouth:'<rect x="7" y="8" width="2" height="1" fill="#0f380f"/>' } },
+      running: { now:'WORKING', agent:'CLAUDE',     detail:'read_file',  hp:'90/100', hpw:'90%', halo:'#facc15',
+                 sprite: { eye:[[6,5],[9,5]], mouth:'<rect x="7" y="9" width="2" height="1" fill="#0f380f"/>' } },
+      waiting: { now:'AWAIT',   agent:'CURSOR',     detail:'permission?',hp:'80/100', hpw:'80%', halo:'#fb923c',
+                 sprite: { eye:[[6,5],[9,5]], mouth:'<rect x="7" y="8" width="1" height="1" fill="#0f380f"/><rect x="8" y="9" width="1" height="1" fill="#0f380f"/>' } },
+      error:   { now:'ERROR',   agent:'CLAUDE',     detail:'429 limit',  hp:'30/100', hpw:'30%', halo:'#f87171',
+                 sprite: { eye:[[6,6],[9,6]], mouth:'<rect x="7" y="9" width="2" height="1" fill="#0f380f"/><rect x="6" y="8" width="1" height="1" fill="#0f380f"/><rect x="9" y="8" width="1" height="1" fill="#0f380f"/>' } }
+    };
+    let auto = true, idx = 0;
+    function setState(s){
+      document.getElementById('stateNow').textContent = data[s].now;
+      document.getElementById('agentName').textContent = data[s].agent;
+      document.getElementById('stateDetail').textContent = data[s].detail;
+      document.getElementById('hpVal').textContent = data[s].hp;
+      document.getElementById('hpBar').style.width = data[s].hpw;
+      // sprite
+      const sp = data[s].sprite;
+      document.getElementById('eyeL').setAttribute('x', sp.eye[0][0]);
+      document.getElementById('eyeL').setAttribute('y', sp.eye[0][1]);
+      document.getElementById('eyeR').setAttribute('x', sp.eye[1][0]);
+      document.getElementById('eyeR').setAttribute('y', sp.eye[1][1]);
+      // 替换 mouth
+      const mouthEl = document.getElementById('mouth1');
+      const parent = mouthEl.parentNode;
+      const newWrap = document.createElement('div');
+      newWrap.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg">' + sp.mouth + '</svg>';
+      // 简化: 直接重新设 attribute
+      // 实际上 mouth 的形态可能含多个 rect, 用 g 包一下
+      // 这里简单做法: 重新克隆并替换
+      mouthEl.outerHTML = '<g id="mouth1">' + sp.mouth + '</g>';
+      document.getElementById('halo').setAttribute('fill', data[s].halo);
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+  </script>
+</body>
+</html>

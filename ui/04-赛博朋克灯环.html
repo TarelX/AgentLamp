@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 04 · 赛博朋克灯环</title>
+  <style>
+    :root {
+      --bg: #060614; --panel: #0e0e1f; --line: #1f1f3a;
+      --text: #e5e7eb; --muted: #8b8ba8; --dim: #4b4b65;
+      --neon-cyan: #00f0ff;
+      --neon-magenta: #ff00ea;
+      --neon-yellow: #ffd60a;
+      --neon-green: #00ff88;
+      --neon-red: #ff2e63;
+      --neon-orange: #ff8c00;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 24px;
+      background-image:
+        linear-gradient(rgba(0,240,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header h1 {
+      font-size: 22px; font-weight: 600;
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+      letter-spacing: 0.04em;
+    }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--neon-magenta); text-decoration: none; font-size: 12px; text-shadow: 0 0 8px rgba(255,0,234,0.3); font-family: "JetBrains Mono", monospace; }
+    a.back:hover { color: white; }
+
+    .stage {
+      flex: 1; min-height: 520px;
+      background: radial-gradient(ellipse at center, #0a0a1f 0%, #02020a 70%);
+      border: 1px solid rgba(0,240,255,0.15);
+      border-radius: 14px;
+      position: relative;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    /* 网格背景 */
+    .stage::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        linear-gradient(rgba(0,240,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,240,255,0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    }
+    /* 扫描线 */
+    .stage::after {
+      content: ''; position: absolute; left: 0; right: 0; top: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      box-shadow: 0 0 12px var(--neon-cyan);
+      animation: scan 4s linear infinite;
+    }
+    @keyframes scan { from { top: 0; } to { top: 100%; } }
+
+    /* 灯环主体 */
+    .ring-wrap {
+      position: relative;
+      width: 280px; height: 280px;
+      display: grid; place-items: center;
+    }
+    /* 外圈 - 大灯环 */
+    .ring-outer {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 6px solid;
+      border-color: var(--neon-cyan);
+      box-shadow:
+        0 0 30px var(--neon-cyan),
+        inset 0 0 30px var(--neon-cyan);
+      transition: all 0.5s;
+    }
+    .ring-outer.idle    { border-color: var(--neon-green); box-shadow: 0 0 30px var(--neon-green), inset 0 0 30px rgba(0,255,136,0.4); }
+    .ring-outer.running { border-color: var(--neon-yellow); box-shadow: 0 0 30px var(--neon-yellow), inset 0 0 30px rgba(255,214,10,0.5); animation: ring-rotate 4s linear infinite, ring-pulse 1.2s ease-in-out infinite; }
+    .ring-outer.waiting { border-color: var(--neon-orange); box-shadow: 0 0 50px var(--neon-orange), inset 0 0 50px rgba(255,140,0,0.6); animation: ring-blink 0.7s linear infinite; }
+    .ring-outer.error   { border-color: var(--neon-red); box-shadow: 0 0 60px var(--neon-red), inset 0 0 60px rgba(255,46,99,0.7); animation: ring-glitch 0.3s linear infinite; }
+    @keyframes ring-rotate { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+    @keyframes ring-pulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
+    @keyframes ring-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes ring-glitch {
+      0%,100% { transform: translate(0); filter: hue-rotate(0deg); }
+      25% { transform: translate(-2px, 1px); filter: hue-rotate(-10deg); }
+      75% { transform: translate(2px, -1px); filter: hue-rotate(10deg); }
+    }
+    /* 内圈 - 描述显示 */
+    .ring-inner {
+      position: relative;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(255,255,255,0.04), transparent 60%),
+        rgba(2,2,10,0.85);
+      border: 1px solid rgba(0,240,255,0.2);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      backdrop-filter: blur(10px);
+    }
+    .ring-inner .state-label {
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0.3em;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 10px rgba(0,240,255,0.6);
+      margin-bottom: 8px;
+    }
+    .ring-inner .state-now {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: "JetBrains Mono", monospace;
+      text-shadow: 0 0 15px currentColor;
+      transition: all 0.5s;
+    }
+    .ring-inner.idle .state-now    { color: var(--neon-green); }
+    .ring-inner.running .state-now { color: var(--neon-yellow); }
+    .ring-inner.waiting .state-now { color: var(--neon-orange); }
+    .ring-inner.error .state-now   { color: var(--neon-red); }
+    .ring-inner .state-detail {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 8px;
+      max-width: 160px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .ring-inner .timer {
+      position: absolute; bottom: 20px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      color: var(--neon-magenta);
+      text-shadow: 0 0 8px rgba(255,0,234,0.5);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 粒子(简单点光) */
+    .particle {
+      position: absolute; width: 2px; height: 2px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      box-shadow: 0 0 6px var(--neon-cyan);
+      animation: drift 6s linear infinite;
+    }
+
+    @keyframes drift {
+      from { transform: translate(0,0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      to { transform: translate(60px, -200px); opacity: 0; }
+    }
+
+    /* HUD 角标 */
+    .hud-corner {
+      position: absolute;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px;
+      color: var(--neon-cyan);
+      text-shadow: 0 0 6px rgba(0,240,255,0.4);
+      letter-spacing: 0.1em;
+    }
+    .hud-tl { top: 20px; left: 24px; }
+    .hud-tr { top: 20px; right: 24px; text-align: right; }
+    .hud-bl { bottom: 20px; left: 24px; }
+    .hud-br { bottom: 20px; right: 24px; text-align: right; color: var(--neon-magenta); }
+
+    /* 控制条 */
+    .controls { display: flex; gap: 8px; align-items: center;
+      padding: 12px 16px; background: rgba(14,14,31,0.6);
+      border: 1px solid var(--line); border-radius: 10px;
+      backdrop-filter: blur(10px); }
+    .controls .label { font-size: 12px; color: var(--neon-cyan); margin-right: 6px; font-family: "JetBrains Mono", monospace; letter-spacing: 0.1em; }
+    .btn { background: transparent; color: var(--text);
+      border: 1px solid rgba(0,240,255,0.2); padding: 6px 12px; border-radius: 4px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s;
+      font-family: "JetBrains Mono", monospace; letter-spacing: 0.05em; }
+    .btn:hover { border-color: var(--neon-cyan); box-shadow: 0 0 12px rgba(0,240,255,0.4); color: var(--neon-cyan); }
+    .btn.active { background: rgba(255,0,234,0.15); border-color: var(--neon-magenta); color: var(--neon-magenta); box-shadow: 0 0 16px rgba(255,0,234,0.4); }
+    .btn .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; box-shadow: 0 0 6px currentColor; }
+    .btn .led.idle { background: var(--neon-green); color: var(--neon-green); }
+    .btn .led.running { background: var(--neon-yellow); color: var(--neon-yellow); }
+    .btn .led.waiting { background: var(--neon-orange); color: var(--neon-orange); }
+    .btn .led.error { background: var(--neon-red); color: var(--neon-red); }
+
+    .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .meta-card { background: rgba(14,14,31,0.6); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .meta-card .k { font-size: 11px; color: var(--neon-cyan); letter-spacing: 0.08em; text-transform: uppercase; font-family: "JetBrains Mono", monospace; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 600; }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>FORM_04 :: CYBERPUNK_RING</h1>
+      <div class="desc">大圆环 + 霓虹色 + 旋转 + 粒子 + 故障干扰。年轻程序员审美,截图传播力满分。</div>
+    </div>
+    <a class="back" href="index.html">[← BACK]</a>
+  </div>
+
+  <div class="stage">
+    <div class="hud-corner hud-tl">
+      VIBE_AGENT.SYS<br>
+      v1.0.0
+    </div>
+    <div class="hud-corner hud-tr">
+      AGENTS: 3<br>
+      ACTIVE: <span id="hudActive">0</span>
+    </div>
+    <div class="hud-corner hud-bl">
+      [CLAUDE_CODE] [CODEX] [CURSOR]
+    </div>
+    <div class="hud-corner hud-br">
+      UPTIME: <span id="hudUptime">00:12:34</span>
+    </div>
+
+    <div class="ring-wrap">
+      <div class="ring-outer idle" id="ringOuter"></div>
+      <div class="ring-inner idle" id="ringInner">
+        <div class="state-label">STATUS</div>
+        <div class="state-now" id="ringNow">IDLE</div>
+        <div class="state-detail" id="ringDetail">all systems nominal</div>
+        <div class="timer" id="ringTimer">00:00</div>
+      </div>
+      <!-- 粒子 -->
+      <span class="particle" style="left: 10%; bottom: 30%; animation-delay: 0s;"></span>
+      <span class="particle" style="left: 80%; bottom: 20%; animation-delay: 1.5s;"></span>
+      <span class="particle" style="left: 50%; bottom: 10%; animation-delay: 3s;"></span>
+      <span class="particle" style="left: 20%; bottom: 60%; animation-delay: 4.5s;"></span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">SIM_STATE:</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>IDLE</button>
+    <button class="btn" data-state="running"><span class="led running"></span>RUNNING</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>AWAIT</button>
+    <button class="btn" data-state="error"><span class="led error"></span>ERROR</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted); font-family: 'JetBrains Mono', monospace;">// auto-cycle 3.5s · click to lock</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card"><div class="k">SHARE_POWER</div><div class="v">★★★★★ / 5</div><div class="vd">截图就是 X 爆款</div></div>
+    <div class="meta-card"><div class="k">BUILD_COST</div><div class="v">★★★★ / 5</div><div class="vd">CSS 粒子+旋转+霓虹</div></div>
+    <div class="meta-card"><div class="k">AUDIENCE</div><div class="v">年轻程序员</div><div class="vd">爱赛博朋克审美</div></div>
+    <div class="meta-card"><div class="k">OVERALL</div><div class="v">★★★★★ / 5</div><div class="vd">视觉传播力压倒优势</div></div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const data = {
+      idle:    { now: 'IDLE',    detail: 'all systems nominal',           timer: '00:00' },
+      running: { now: 'RUNNING', detail: 'claude::read_file src/server.go', timer: '00:12' },
+      waiting: { now: 'AWAIT',   detail: 'cursor::run_terminal_cmd?',     timer: '00:03' },
+      error:   { now: 'ERROR',   detail: '429 rate_limit · retry 2/3',     timer: '00:01' }
+    };
+    let auto = true, idx = 0;
+    function setState(s){
+      document.getElementById('ringOuter').className = 'ring-outer ' + s;
+      document.getElementById('ringInner').className = 'ring-inner ' + s;
+      document.getElementById('ringNow').textContent = data[s].now;
+      document.getElementById('ringDetail').textContent = data[s].detail;
+      document.getElementById('ringTimer').textContent = data[s].timer;
+      document.getElementById('hudActive').textContent = s === 'idle' ? '0' : '1';
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+    // 模拟 uptime
+    let upt = 754;
+    setInterval(() => {
+      upt++;
+      const h = String(Math.floor(upt/3600)).padStart(2,'0');
+      const m = String(Math.floor((upt%3600)/60)).padStart(2,'0');
+      const s = String(upt%60).padStart(2,'0');
+      document.getElementById('hudUptime').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+  </script>
+</body>
+</html>

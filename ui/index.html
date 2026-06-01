@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Agent Status Light · 8 种 UI 形态原型对比</title>
+  <style>
+    :root {
+      --bg: #0a0a0f; --panel: #14141a; --panel-2: #1a1a22; --line: #1f1f28;
+      --text: #e5e7eb; --muted: #9ca3af; --dim: #4b5563;
+      --green: #22c55e; --yellow: #eab308; --orange: #f59e0b; --red: #ef4444;
+      --accent: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 40px 32px 60px;
+      background-image:
+        radial-gradient(circle at 10% 0%, rgba(168,85,247,0.06) 0, transparent 40%),
+        radial-gradient(circle at 90% 100%, rgba(34,197,94,0.04) 0, transparent 40%);
+    }
+    .container { max-width: 1480px; margin: 0 auto; }
+
+    .hero {
+      text-align: center;
+      padding: 30px 0 50px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 40px;
+    }
+    .hero h1 {
+      font-size: 36px; font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #fff 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .sub {
+      color: var(--muted); font-size: 15px;
+      max-width: 680px; margin: 0 auto;
+      line-height: 1.7;
+    }
+    .hero .meta-row {
+      margin-top: 24px;
+      display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+      font-size: 12px; color: var(--muted);
+    }
+    .hero .meta-row span {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 5px 12px; border-radius: 999px;
+    }
+    .hero .meta-row b { color: var(--text); }
+
+    .legend {
+      display: flex; justify-content: center; gap: 24px;
+      margin-bottom: 36px;
+      padding: 14px 20px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      flex-wrap: wrap;
+    }
+    .legend .item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--muted);
+    }
+    .legend .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .legend .dot.idle    { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .legend .dot.running { background: var(--yellow); box-shadow: 0 0 6px rgba(234,179,8,0.5); }
+    .legend .dot.waiting { background: var(--orange); box-shadow: 0 0 8px rgba(245,158,11,0.7); }
+    .legend .dot.error   { background: var(--red); box-shadow: 0 0 10px rgba(239,68,68,0.8); }
+
+    /* 卡片网格 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 50px;
+    }
+    @media (max-width: 1200px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: all 0.25s;
+      display: flex; flex-direction: column;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(168, 85, 247, 0.4);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(168,85,247,0.2);
+    }
+    .card.recommend::before {
+      content: '推荐';
+      position: absolute; top: 12px; right: 12px;
+      background: var(--accent);
+      color: white;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.05em;
+      z-index: 2;
+      box-shadow: 0 4px 12px rgba(168,85,247,0.5);
+    }
+    /* 预览区域 - 用 iframe 真实嵌入 */
+    .preview {
+      height: 240px;
+      background: var(--panel-2);
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--line);
+    }
+    .preview iframe {
+      width: 200%;
+      height: 200%;
+      border: 0;
+      transform: scale(0.5);
+      transform-origin: top left;
+      pointer-events: none;
+    }
+    /* 备用图示(无 iframe 时) */
+    .preview-placeholder {
+      width: 100%; height: 100%;
+      display: grid; place-items: center;
+      font-size: 11px; color: var(--dim);
+    }
+
+    .card-body {
+      padding: 16px 18px;
+      flex: 1; display: flex; flex-direction: column;
+    }
+    .card-num {
+      font-size: 11px; color: var(--accent); letter-spacing: 0.1em;
+      font-family: "JetBrains Mono", monospace;
+      margin-bottom: 4px;
+    }
+    .card-title {
+      font-size: 16px; font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+    .card-desc {
+      font-size: 12px; color: var(--muted);
+      line-height: 1.5; flex: 1;
+    }
+    .card-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      font-size: 11px;
+    }
+    .card-meta .k { color: var(--muted); }
+    .card-meta .v { color: var(--text); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* 总结部分 */
+    .summary {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 32px 36px;
+      margin-top: 32px;
+    }
+    .summary h2 {
+      font-size: 22px;
+      margin-bottom: 18px;
+    }
+    .summary p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+    .summary table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+    .summary th {
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--panel-2);
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--line);
+    }
+    .summary td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .summary tr.highlight td {
+      background: rgba(168,85,247,0.08);
+      color: white;
+    }
+    .summary .stars { color: var(--accent); font-weight: 700; }
+
+    footer {
+      text-align: center;
+      padding: 30px 0 0;
+      color: var(--dim);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>AI Agent Status Light · UI 形态原型对比</h1>
+      <div class="sub">
+        Wails v3 + React + TS + Go 跨平台桌面端 · 8 种 UI 候选形态可视化对比 · 每个原型可独立点开演示 4 种状态切换
+      </div>
+      <div class="meta-row">
+        <span>已选技术栈: <b>Wails v3</b></span>
+        <span>目标平台: <b>macOS / Windows / Linux</b></span>
+        <span>不做: <b>硬件 / 手机端</b></span>
+        <span>开源协议: <b>MIT</b></span>
+        <span>对标 stars: <b>10k+</b></span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="item"><span class="dot idle"></span>空闲 (idle)</div>
+      <div class="item"><span class="dot running"></span>运行中 (running)</div>
+      <div class="item"><span class="dot waiting"></span>等待用户 (waiting)</div>
+      <div class="item"><span class="dot error"></span>异常 (error)</div>
+    </div>
+
+    <div class="grid">
+      <a href="01-菜单栏小图标.html" class="card" target="_blank">
+        <div class="preview"><iframe src="01-菜单栏小图标.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_01</div>
+          <div class="card-title">菜单栏小图标</div>
+          <div class="card-desc">macOS 顶栏 / Win 托盘一颗小圆点。极简、不打扰,悬停展开 agent 详情。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v">★★ / 5</span>
+            <span class="k">实现</span><span class="v">★ / 5</span>
+            <span class="k">受众</span><span class="v">极简派</span>
+            <span class="k">综合</span><span class="v">★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="02-桌面浮动状态灯.html" class="card" target="_blank">
+        <div class="preview"><iframe src="02-桌面浮动状态灯.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_02</div>
+          <div class="card-title">桌面浮动状态灯</div>
+          <div class="card-desc">可拖动的发光小球,常驻屏幕。物理质感(磨砂+玻璃罩),非 AI slop 漂浮球。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v">★★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★ / 5</span>
+            <span class="k">受众</span><span class="v">折中派</span>
+            <span class="k">综合</span><span class="v">★★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="03-物理灯模拟.html" class="card" target="_blank">
+        <div class="preview"><iframe src="03-物理灯模拟.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_03</div>
+          <div class="card-title">物理灯模拟(交通信号灯)</div>
+          <div class="card-desc">致敬 JasonLam08 硬件版,纯软件实现仿真三色灯。金属壳 + 真实发光余晖。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v">★★★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★★ / 5</span>
+            <span class="k">受众</span><span class="v">极客+怀旧</span>
+            <span class="k">综合</span><span class="v">★★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="04-赛博朋克灯环.html" class="card recommend" target="_blank">
+        <div class="preview"><iframe src="04-赛博朋克灯环.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_04</div>
+          <div class="card-title">赛博朋克灯环</div>
+          <div class="card-desc">大圆环 + 霓虹色 + 旋转 + 粒子 + 故障干扰。年轻程序员审美,X / Reddit 截图爆款体质。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v stars">★★★★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★★★ / 5</span>
+            <span class="k">受众</span><span class="v">年轻程序员</span>
+            <span class="k">综合</span><span class="v stars">★★★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="05-二次元角色.html" class="card" target="_blank">
+        <div class="preview"><iframe src="05-二次元角色.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_05</div>
+          <div class="card-title">Live2D 二次元角色</div>
+          <div class="card-desc">桌面养只 AI 助理。状态映射表情/动作。小红书/B站爆款,但海外冷+直男反感。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v stars">★★★★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★★★★ / 5</span>
+            <span class="k">受众</span><span class="v">国内+二次元</span>
+            <span class="k">综合</span><span class="v">★★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="06-像素艺术宠物.html" class="card" target="_blank">
+        <div class="preview"><iframe src="06-像素艺术宠物.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_06</div>
+          <div class="card-title">像素艺术宠物</div>
+          <div class="card-desc">8-bit Game Boy 风格,程序员怀旧体质。HP/Token/Session sprite 化展示。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v">★★★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★★ / 5</span>
+            <span class="k">受众</span><span class="v">游戏怀旧</span>
+            <span class="k">综合</span><span class="v">★★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="07-数据Dashboard.html" class="card" target="_blank">
+        <div class="preview"><iframe src="07-数据Dashboard.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_07</div>
+          <div class="card-title">数据 Dashboard</div>
+          <div class="card-desc">信息密度最高,工程师审美。多 agent 卡片 + sparkline + 历史时间轴 + token 统计。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v">★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★★ / 5</span>
+            <span class="k">受众</span><span class="v">power user</span>
+            <span class="k">综合</span><span class="v">★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="08-屏幕氛围灯.html" class="card" target="_blank">
+        <div class="preview"><iframe src="08-屏幕氛围灯.html" loading="lazy"></iframe></div>
+        <div class="card-body">
+          <div class="card-num">FORM_08</div>
+          <div class="card-title">屏幕边缘氛围灯</div>
+          <div class="card-desc">整个屏幕边缘以状态色呼吸发光。极致沉浸但占满视野,适合"重要才触发"模式。</div>
+          <div class="card-meta">
+            <span class="k">传播力</span><span class="v">★★★★ / 5</span>
+            <span class="k">实现</span><span class="v">★★★ / 5</span>
+            <span class="k">受众</span><span class="v">沉浸派</span>
+            <span class="k">综合</span><span class="v">★★★★ / 5</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <div class="summary">
+      <h2>建议:不要选单一形态,做"主形态 + 皮肤生态"</h2>
+      <p>
+        参考成功案例:Discord 默认 UI 朴素但 Nitro 主题做出强差异化;Cursor 默认深色但用户花式改主题;
+        Mihoyo 游戏角色/皮肤就是 viral 引擎。
+      </p>
+      <p>
+        <b style="color:var(--text)">推荐:主形态 = 桌面浮动模块化挂件(形态 02),皮肤系统 = 开源主题市场</b>。
+        默认装赛博朋克灯环(形态 04)皮肤冲 stars,允许用户切换到二次元/像素/物理灯/Dashboard。
+        每个皮肤 = 一个 React 组件(开源 npm 包),社区 PR 提交,皮肤越多 → 用户越多 → 皮肤越多飞轮。
+      </p>
+
+      <table>
+        <thead>
+          <tr><th>形态</th><th>传播</th><th>实现</th><th>受众</th><th>综合</th><th>定位建议</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>01 菜单栏小图标</td><td>★★</td><td>★</td><td>极简派</td><td>★★★</td><td>辅助形态(最小化时)</td></tr>
+          <tr><td>02 桌面浮动状态灯</td><td>★★★</td><td>★★</td><td>折中派</td><td>★★★★</td><td><b style="color:white">主载体形态(容器)</b></td></tr>
+          <tr><td>03 物理灯模拟</td><td>★★★★</td><td>★★★</td><td>极客+怀旧</td><td>★★★★</td><td>默认皮肤之一</td></tr>
+          <tr class="highlight"><td><b>04 赛博朋克灯环</b></td><td class="stars">★★★★★</td><td>★★★★</td><td>年轻程序员</td><td class="stars">★★★★★</td><td><b>v1.0 出厂默认皮肤</b>(冲 stars)</td></tr>
+          <tr><td>05 Live2D 二次元角色</td><td class="stars">★★★★★</td><td>★★★★★</td><td>国内+二次元</td><td>★★★★</td><td>国内皮肤(可选)</td></tr>
+          <tr><td>06 像素艺术宠物</td><td>★★★★</td><td>★★★</td><td>游戏怀旧</td><td>★★★★</td><td>怀旧皮肤(可选)</td></tr>
+          <tr><td>07 数据 Dashboard</td><td>★★</td><td>★★★</td><td>power user</td><td>★★★</td><td>"详细模式"(独立窗口)</td></tr>
+          <tr><td>08 屏幕氛围灯</td><td>★★★★</td><td>★★★</td><td>沉浸派</td><td>★★★★</td><td>"重要才触发"附加层</td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top: 24px;">
+        <b style="color: var(--text)">下一步等 BOSS 决策</b>:
+        ① 项目命名(Vibe / Lumi / AgentPulse 等);
+        ② 是否走"主形态 + 皮肤生态"组合方案;
+        ③ v1.0 出厂默认皮肤(推荐 04 赛博朋克灯环);
+        ④ v0.1 首发 agent(推荐 Claude Code + Cursor)。
+      </p>
+    </div>
+
+    <footer>
+      AI Agent Status Light · UI Prototype Showcase · 2026-06-01<br>
+      <a href="../AI-Agent-StatusLight-prd.md">← 查看完整 PRD</a> ·
+      8 种形态原型 · 每个均可独立点开
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A AgentLamp application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/agentlamp.exe %u
+Terminal=false
+Type=Application
+Icon=agentlamp.exe
+Categories=Utility;
+StartupWMClass=agentlamp.exe
+
+ 

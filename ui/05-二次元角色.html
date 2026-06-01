@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 05 · Live2D 二次元角色</title>
+  <style>
+    :root {
+      --bg: #f8f0f7; --panel: #fff; --line: #f3d9eb;
+      --text: #2d2d3a; --muted: #8b7d8e; --dim: #c9bcc4;
+      --pink: #ff79b0; --pink-light: #ffd0e3;
+      --skin: #ffe4d1; --hair: #6b9bd1;
+      --green: #4ade80; --yellow: #facc15; --orange: #fb923c; --red: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 24px;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,121,176,0.12) 0, transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(107,155,209,0.08) 0, transparent 40%);
+    }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header h1 { font-size: 22px; font-weight: 600; color: var(--text); }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--pink); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: var(--text); }
+
+    .stage {
+      flex: 1; min-height: 520px;
+      background: linear-gradient(180deg, #fff 0%, #fce7f3 100%);
+      border: 1px solid var(--line); border-radius: 24px;
+      display: flex; align-items: center; justify-content: center; gap: 60px;
+      padding: 40px;
+      box-shadow: 0 30px 60px rgba(255, 121, 176, 0.1);
+    }
+
+    /* 角色 SVG 容器 */
+    .character {
+      position: relative;
+      width: 280px; height: 360px;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+    /* 对话气泡 */
+    .bubble {
+      position: relative;
+      max-width: 320px;
+      background: white;
+      border: 2px solid var(--pink-light);
+      border-radius: 24px;
+      padding: 20px 24px;
+      box-shadow: 0 12px 30px rgba(255,121,176,0.15);
+    }
+    .bubble::before {
+      content: ''; position: absolute;
+      left: -16px; top: 50%; transform: translateY(-50%);
+      width: 0; height: 0;
+      border-style: solid;
+      border-width: 12px 16px 12px 0;
+      border-color: transparent var(--pink-light) transparent transparent;
+    }
+    .bubble::after {
+      content: ''; position: absolute;
+      left: -12px; top: 50%; transform: translateY(-50%);
+      width: 0; height: 0;
+      border-style: solid;
+      border-width: 10px 14px 10px 0;
+      border-color: transparent white transparent transparent;
+    }
+    .bubble .b-title {
+      font-size: 16px; font-weight: 700; color: var(--pink);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .bubble .b-title .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+    .bubble.idle    .b-title .dot { background: var(--green); }
+    .bubble.running .b-title .dot { background: var(--yellow); }
+    .bubble.waiting .b-title .dot { background: var(--orange); }
+    .bubble.error   .b-title .dot { background: var(--red); }
+    .bubble .b-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+    .bubble .b-meta {
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px dashed var(--pink-light);
+      font-size: 11px; color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* SVG 中的表情切换通过类 */
+
+    /* 控制条 */
+    .controls { display: flex; gap: 8px; align-items: center;
+      padding: 14px 18px; background: white;
+      border: 1px solid var(--line); border-radius: 14px;
+      box-shadow: 0 4px 10px rgba(255,121,176,0.05); }
+    .controls .label { font-size: 12px; color: var(--pink); margin-right: 6px; font-weight: 600; }
+    .btn { background: white; color: var(--text);
+      border: 1.5px solid var(--line); padding: 8px 14px; border-radius: 999px;
+      font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: inherit; font-weight: 500; }
+    .btn:hover { background: var(--pink-light); border-color: var(--pink); color: var(--pink); }
+    .btn.active { background: var(--pink); border-color: var(--pink); color: white; box-shadow: 0 4px 10px rgba(255,121,176,0.3); }
+    .btn .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .btn .led.idle { background: var(--green); }
+    .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); }
+    .btn .led.error { background: var(--red); }
+
+    .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .meta-card { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: 0 4px 10px rgba(255,121,176,0.05); }
+    .meta-card .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 700; color: var(--pink); }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>形态 05 · Live2D 二次元角色</h1>
+      <div class="desc">桌面养一只 AI 助理。状态映射到表情和动作。国内 B 站 / 小红书传播性满分,但偏好分歧大。<br>本原型用 SVG 简化模拟,实际产品需对接 Live2D Cubism。</div>
+    </div>
+    <a class="back" href="index.html">← 返回总览</a>
+  </div>
+
+  <div class="stage">
+    <!-- 角色 -->
+    <div class="character">
+      <svg viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg" id="charSvg">
+        <!-- 身体(连衣裙) -->
+        <ellipse cx="140" cy="290" rx="80" ry="60" fill="#ff79b0"/>
+        <rect x="115" y="220" width="50" height="80" rx="6" fill="#ff79b0"/>
+        <!-- 脖子 -->
+        <rect x="125" y="200" width="30" height="30" fill="#ffe4d1"/>
+        <!-- 头 -->
+        <ellipse cx="140" cy="160" rx="75" ry="78" fill="#ffe4d1"/>
+        <!-- 头发(后) -->
+        <path d="M 65 145 Q 60 230 90 270 Q 70 180 80 130 Z" fill="#6b9bd1"/>
+        <path d="M 215 145 Q 220 230 190 270 Q 210 180 200 130 Z" fill="#6b9bd1"/>
+        <!-- 头发(前 - 刘海) -->
+        <path d="M 70 110 Q 100 70 140 80 Q 180 70 210 110 Q 200 130 180 120 Q 150 100 140 115 Q 130 100 100 120 Q 80 130 70 110 Z" fill="#6b9bd1"/>
+        <!-- 双马尾 -->
+        <ellipse cx="55" cy="180" rx="22" ry="40" fill="#6b9bd1"/>
+        <ellipse cx="225" cy="180" rx="22" ry="40" fill="#6b9bd1"/>
+        <!-- 蝴蝶结 -->
+        <g id="bow">
+          <ellipse cx="55" cy="135" rx="14" ry="9" fill="#ff79b0"/>
+          <circle cx="55" cy="135" r="4" fill="#fff"/>
+          <ellipse cx="225" cy="135" rx="14" ry="9" fill="#ff79b0"/>
+          <circle cx="225" cy="135" r="4" fill="#fff"/>
+        </g>
+        <!-- 腮红 -->
+        <ellipse cx="100" cy="180" rx="12" ry="6" fill="#ff9ec5" opacity="0.6"/>
+        <ellipse cx="180" cy="180" rx="12" ry="6" fill="#ff9ec5" opacity="0.6"/>
+
+        <!-- 眼睛(根据状态变化) -->
+        <g id="eyes">
+          <!-- 默认: 大眼 -->
+          <ellipse cx="105" cy="160" rx="14" ry="18" fill="white" stroke="#2d2d3a" stroke-width="2"/>
+          <ellipse cx="175" cy="160" rx="14" ry="18" fill="white" stroke="#2d2d3a" stroke-width="2"/>
+          <circle cx="105" cy="162" r="9" fill="#6b9bd1"/>
+          <circle cx="175" cy="162" r="9" fill="#6b9bd1"/>
+          <circle cx="103" cy="159" r="3" fill="white"/>
+          <circle cx="173" cy="159" r="3" fill="white"/>
+        </g>
+
+        <!-- 嘴(根据状态变化) -->
+        <g id="mouth">
+          <path d="M 130 200 Q 140 208 150 200" stroke="#d97a92" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- 状态指示徽章(头顶上方) -->
+        <circle cx="140" cy="30" r="14" fill="white" stroke="#ff79b0" stroke-width="2"/>
+        <circle cx="140" cy="30" r="8" id="statusBadge" fill="#4ade80"/>
+      </svg>
+    </div>
+
+    <!-- 对话气泡 -->
+    <div class="bubble idle" id="bubble">
+      <div class="b-title">
+        <span class="dot"></span>
+        <span id="bTitle">空闲中~</span>
+      </div>
+      <div class="b-text" id="bText">主人,我已经准备好啦!可以发新任务咯~</div>
+      <div class="b-meta" id="bMeta">just now · 3 agents standby</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">模拟状态</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>空闲</button>
+    <button class="btn" data-state="running"><span class="led running"></span>思考中</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>等待回应</button>
+    <button class="btn" data-state="error"><span class="led error"></span>呜呜出错了</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted);">自动每 3.5s 切换 · 点击按钮锁定</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card"><div class="k">截图传播力</div><div class="v">★★★★★ / 5</div><div class="vd">小红书/B站爆款体质</div></div>
+    <div class="meta-card"><div class="k">实现难度</div><div class="v">★★★★★ / 5</div><div class="vd">优质美术资源贵</div></div>
+    <div class="meta-card"><div class="k">主要受众</div><div class="v">国内 + 二次元</div><div class="vd">海外冷,直男反感</div></div>
+    <div class="meta-card"><div class="k">综合评分</div><div class="v">★★★★ / 5</div><div class="vd">受众极化,高风险高回报</div></div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const data = {
+      idle:    { title: '空闲中~',         text: '主人,我已经准备好啦!可以发新任务咯~',            meta: 'just now · 3 agents standby',  badge: '#4ade80' },
+      running: { title: '在思考啦...',     text: 'Claude Code 正在读 src/server.go,马上就好~',     meta: 'in progress · 12s',          badge: '#facc15' },
+      waiting: { title: '等等主人确认!',   text: 'Cursor 想执行 npm run build,需要你点 Approve!', meta: 'pending · 3s',               badge: '#fb923c' },
+      error:   { title: '呜呜出错了...',   text: 'API 限流啦(429),正在自动重试 (2/3),不要走开!', meta: 'failed · just now',         badge: '#f87171' }
+    };
+    // SVG 表情变化
+    const expressions = {
+      idle: {
+        eyes: '<ellipse cx="105" cy="160" rx="14" ry="18" fill="white" stroke="#2d2d3a" stroke-width="2"/><ellipse cx="175" cy="160" rx="14" ry="18" fill="white" stroke="#2d2d3a" stroke-width="2"/><circle cx="105" cy="162" r="9" fill="#6b9bd1"/><circle cx="175" cy="162" r="9" fill="#6b9bd1"/><circle cx="103" cy="159" r="3" fill="white"/><circle cx="173" cy="159" r="3" fill="white"/>',
+        mouth: '<path d="M 125 198 Q 140 215 155 198" stroke="#d97a92" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+      },
+      running: {
+        // 思考: 眼睛眯成弧线
+        eyes: '<path d="M 91 160 Q 105 152 119 160" stroke="#2d2d3a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M 161 160 Q 175 152 189 160" stroke="#2d2d3a" stroke-width="2.5" fill="none" stroke-linecap="round"/>',
+        mouth: '<circle cx="140" cy="200" r="3" fill="#d97a92"/>'
+      },
+      waiting: {
+        // 困惑: 眼睛大睁 + ?
+        eyes: '<ellipse cx="105" cy="160" rx="14" ry="20" fill="white" stroke="#2d2d3a" stroke-width="2"/><ellipse cx="175" cy="160" rx="14" ry="20" fill="white" stroke="#2d2d3a" stroke-width="2"/><circle cx="105" cy="166" r="7" fill="#6b9bd1"/><circle cx="175" cy="166" r="7" fill="#6b9bd1"/><circle cx="103" cy="163" r="2.5" fill="white"/><circle cx="173" cy="163" r="2.5" fill="white"/><text x="225" y="100" font-size="32" font-weight="900" fill="#fb923c">?</text>',
+        mouth: '<ellipse cx="140" cy="202" rx="4" ry="6" fill="#d97a92"/>'
+      },
+      error: {
+        // 哭: 闭眼 + 泪滴
+        eyes: '<path d="M 91 160 L 119 160" stroke="#2d2d3a" stroke-width="2.5" stroke-linecap="round"/><path d="M 86 168 Q 90 168 92 172" stroke="#2d2d3a" stroke-width="2" fill="none"/><path d="M 161 160 L 189 160" stroke="#2d2d3a" stroke-width="2.5" stroke-linecap="round"/><path d="M 184 168 Q 188 168 190 172" stroke="#2d2d3a" stroke-width="2" fill="none"/><ellipse cx="92" cy="180" rx="3" ry="6" fill="#7dd3fc" opacity="0.85"/><ellipse cx="188" cy="180" rx="3" ry="6" fill="#7dd3fc" opacity="0.85"/>',
+        mouth: '<path d="M 125 208 Q 140 195 155 208" stroke="#d97a92" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+      }
+    };
+    let auto = true, idx = 0;
+    function setState(s){
+      const eyes = document.getElementById('eyes');
+      const mouth = document.getElementById('mouth');
+      const badge = document.getElementById('statusBadge');
+      eyes.innerHTML = expressions[s].eyes;
+      mouth.innerHTML = expressions[s].mouth;
+      badge.setAttribute('fill', data[s].badge);
+      const bubble = document.getElementById('bubble');
+      bubble.className = 'bubble ' + s;
+      document.getElementById('bTitle').textContent = data[s].title;
+      document.getElementById('bText').textContent = data[s].text;
+      document.getElementById('bMeta').textContent = data[s].meta;
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+  </script>
+</body>
+</html>

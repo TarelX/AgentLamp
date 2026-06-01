@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 08 · 屏幕边缘氛围灯</title>
+  <style>
+    :root {
+      --bg: #0a0a0f; --panel: #14141a; --line: #1f1f28;
+      --text: #e5e7eb; --muted: #9ca3af; --dim: #4b5563;
+      --green: #22c55e; --yellow: #eab308; --orange: #f59e0b; --red: #ef4444; --gray: #6b7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh; padding: 32px;
+      display: flex; flex-direction: column; gap: 24px; }
+    .header { display: flex; justify-content: space-between; align-items: baseline; }
+    .header h1 { font-size: 22px; font-weight: 600; }
+    .header .desc { color: var(--muted); margin-top: 6px; font-size: 13px; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: var(--text); }
+
+    /* Stage 模拟一个屏幕 */
+    .screen-mockup {
+      flex: 1; min-height: 520px;
+      position: relative;
+      background: #0d0f14;
+      border-radius: 16px;
+      border: 12px solid #1a1c22;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,0.04),
+        0 30px 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }
+    /* 氛围灯 - 四条边发光 */
+    .ambient {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow:
+        inset 0 0 0 2px rgba(34,197,94,0.6),
+        inset 0 0 30px 6px rgba(34,197,94,0.5),
+        inset 0 0 80px 12px rgba(34,197,94,0.25);
+      transition: box-shadow 0.6s ease;
+    }
+    .ambient.idle    { box-shadow: inset 0 0 0 2px rgba(34,197,94,0.6), inset 0 0 30px 6px rgba(34,197,94,0.45), inset 0 0 90px 16px rgba(34,197,94,0.2); }
+    .ambient.running { box-shadow: inset 0 0 0 3px rgba(234,179,8,0.7), inset 0 0 50px 8px rgba(234,179,8,0.5), inset 0 0 120px 20px rgba(234,179,8,0.25); animation: ambient-pulse 1.6s ease-in-out infinite; }
+    .ambient.waiting { box-shadow: inset 0 0 0 4px rgba(245,158,11,0.85), inset 0 0 60px 10px rgba(245,158,11,0.6), inset 0 0 140px 24px rgba(245,158,11,0.3); animation: ambient-blink 0.9s linear infinite; }
+    .ambient.error   { box-shadow: inset 0 0 0 5px rgba(239,68,68,0.95), inset 0 0 80px 14px rgba(239,68,68,0.7), inset 0 0 160px 30px rgba(239,68,68,0.4); animation: ambient-alarm 0.4s linear infinite; }
+    @keyframes ambient-pulse {
+      0%,100% { filter: brightness(1); }
+      50% { filter: brightness(1.3); }
+    }
+    @keyframes ambient-blink {
+      0%,100% { filter: brightness(1); }
+      50% { filter: brightness(0.35); }
+    }
+    @keyframes ambient-alarm {
+      0%,100% { filter: brightness(1.0); }
+      50% { filter: brightness(1.6); }
+    }
+
+    /* 屏幕内容(模拟桌面/编辑器) */
+    .desktop {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, #15181d 0%, #0e1015 50%, #0a0c10 100%);
+      padding: 30px;
+      display: flex; flex-direction: column;
+    }
+    .topbar {
+      display: flex; gap: 12px; align-items: center;
+      font-size: 12px; color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .traffic { width: 12px; height: 12px; border-radius: 50%; }
+    .traffic.r { background: #ed6a5e; }
+    .traffic.y { background: #f5bf4f; }
+    .traffic.g { background: #61c554; }
+    .editor {
+      flex: 1;
+      background: rgba(10,12,16,0.4);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 8px;
+      padding: 18px;
+      font-family: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.7;
+    }
+    .editor .kw { color: #c084fc; }
+    .editor .str { color: #86efac; }
+    .editor .fn { color: #93c5fd; }
+    .editor .com { color: #6b7280; font-style: italic; }
+    .editor .num { color: #fcd34d; }
+
+    /* 屏幕中间的状态文字提示 */
+    .center-hint {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(10px);
+      padding: 8px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 12px;
+      color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .center-hint .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .center-hint.idle    .dot { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.6); }
+    .center-hint.running .dot { background: var(--yellow); box-shadow: 0 0 6px rgba(234,179,8,0.6); }
+    .center-hint.waiting .dot { background: var(--orange); box-shadow: 0 0 8px rgba(245,158,11,0.8); }
+    .center-hint.error   .dot { background: var(--red); box-shadow: 0 0 10px rgba(239,68,68,0.9); }
+
+    /* 控制条 */
+    .controls { display: flex; gap: 8px; align-items: center;
+      padding: 12px 16px; background: var(--panel);
+      border: 1px solid var(--line); border-radius: 10px; }
+    .controls .label { font-size: 12px; color: var(--muted); margin-right: 6px; }
+    .btn { background: transparent; color: var(--text);
+      border: 1px solid var(--line); padding: 6px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .btn:hover { background: rgba(255,255,255,0.04); border-color: #2a2a35; }
+    .btn.active { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.45); color: #d8b4fe; }
+    .btn .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .btn .led.idle { background: var(--green); } .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); } .btn .led.error { background: var(--red); }
+
+    .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .meta-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .meta-card .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 600; }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>形态 08 · 屏幕边缘氛围灯</h1>
+      <div class="desc">整个屏幕边缘以状态色呼吸发光。极致沉浸,极致显眼,但**会占用整个屏幕的视觉**,可能干扰工作。适合"重要状态才触发"模式。</div>
+    </div>
+    <a class="back" href="index.html">← 返回总览</a>
+  </div>
+
+  <div class="screen-mockup">
+    <div class="desktop">
+      <div class="topbar">
+        <span class="traffic r"></span>
+        <span class="traffic y"></span>
+        <span class="traffic g"></span>
+        <span style="margin-left: 8px;">cursor — backend/main.go</span>
+      </div>
+      <div class="editor">
+        <div><span class="kw">package</span> main</div>
+        <div></div>
+        <div><span class="kw">import</span> (</div>
+        <div>  <span class="str">"context"</span></div>
+        <div>  <span class="str">"github.com/wailsapp/wails/v3/pkg/application"</span></div>
+        <div>  <span class="str">"vibe/backend/adapters"</span></div>
+        <div>)</div>
+        <div></div>
+        <div><span class="kw">func</span> <span class="fn">main</span>() {</div>
+        <div>  app := application.<span class="fn">New</span>(application.Options{</div>
+        <div>    Name: <span class="str">"Vibe"</span>,</div>
+        <div>    Description: <span class="str">"AI Agent Status Light"</span>,</div>
+        <div>  })</div>
+        <div></div>
+        <div>  <span class="com">// 启动多 agent 适配器</span></div>
+        <div>  <span class="kw">go</span> adapters.<span class="fn">StartClaude</span>(ctx)</div>
+        <div>  <span class="kw">go</span> adapters.<span class="fn">StartCodex</span>(ctx)</div>
+        <div>  <span class="kw">go</span> adapters.<span class="fn">StartCursor</span>(ctx)</div>
+        <div></div>
+        <div>  app.<span class="fn">Run</span>()</div>
+        <div>}</div>
+      </div>
+    </div>
+    <!-- 氛围灯叠加层 -->
+    <div class="ambient idle" id="ambient"></div>
+    <!-- 中间状态文字 -->
+    <div class="center-hint idle" id="hint">
+      <span class="dot"></span>
+      <span id="hintText">All agents standby · 0 active</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">模拟主灯状态</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>空闲</button>
+    <button class="btn" data-state="running"><span class="led running"></span>运行中</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>等待用户</button>
+    <button class="btn" data-state="error"><span class="led error"></span>异常</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted);">自动每 3.5s 切换 · 点击按钮锁定</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card"><div class="k">截图传播力</div><div class="v">★★★★ / 5</div><div class="vd">整屏氛围,效果震撼</div></div>
+    <div class="meta-card"><div class="k">实现难度</div><div class="v">★★★ / 5</div><div class="vd">全屏透明可点穿窗口</div></div>
+    <div class="meta-card"><div class="k">主要受众</div><div class="v">沉浸派</div><div class="vd">愿意全屏视觉占用</div></div>
+    <div class="meta-card"><div class="k">综合评分</div><div class="v">★★★★ / 5</div><div class="vd">适合"重要才触发"模式</div></div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const hints = {
+      idle:    'All agents standby · 0 active',
+      running: 'Claude Code is working · read_file src/server.go (12s)',
+      waiting: 'Cursor is awaiting permission · `npm run build` ?',
+      error:   'API rate limit hit · auto-retry 2/3'
+    };
+    let auto = true, idx = 0;
+    function setState(s){
+      document.getElementById('ambient').className = 'ambient ' + s;
+      document.getElementById('hint').className = 'center-hint ' + s;
+      document.getElementById('hintText').textContent = hints[s];
+      document.querySelectorAll('.btn[data-state]').forEach(b => b.classList.toggle('active', b.dataset.state === s));
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => b.addEventListener('click', () => { auto = false; setState(b.dataset.state); }));
+    setState(states[0]);
+    setInterval(() => { if(!auto) return; idx = (idx+1)%states.length; setState(states[idx]); }, 3500);
+  </script>
+</body>
+</html>

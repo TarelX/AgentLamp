@@ -1,0 +1,49 @@
+# This file contains the configuration for this project.
+# When you update `info` or `fileAssociations`, run `wails3 task common:update:build-assets` to update the assets.
+# Note that this will overwrite any changes you have made to the assets.
+version: '3'
+
+# This information is used to generate the build assets.
+info:
+  companyName: "TarelX"
+  productName: "AgentLamp"
+  productIdentifier: "io.github.tarelx.agentlamp"
+  description: "Cross-platform AI Agent status light. The Pedestrian Signal for Coders."
+  copyright: "(c) 2026 TarelX"
+  comments: "AgentLamp - open source under MIT (https://github.com/TarelX/AgentLamp)"
+  version: "0.1.0"
+  # cfBundleIconName: "appicon"
+
+# Dev mode configuration
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - frontend
+      - bin
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+      - "*_test.go"
+    watched_extension:
+      - "*.go"
+      - "*.js"
+      - "*.ts"
+    git_ignore: true
+  executes:
+    - cmd: wails3 build DEV=true
+      type: blocking
+    - cmd: wails3 task common:dev:frontend
+      type: background
+    - cmd: wails3 task run
+      type: primary
+
+fileAssociations:
+
+other:
+  - name: AgentLamp

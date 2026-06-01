@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>形态 01 · 菜单栏小图标</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --panel: #14141a;
+      --line: #1f1f28;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --dim: #4b5563;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --gray: #6b7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .header .tag {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .header .desc {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 13px;
+    }
+    .stage {
+      flex: 1;
+      background: #1a1a22;
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(34, 197, 94, 0.04) 0, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.03) 0, transparent 40%);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 480px;
+    }
+    /* 模拟 macOS 顶栏 */
+    .macos-bar {
+      height: 28px;
+      background: rgba(20, 20, 26, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 16px;
+      font-size: 13px;
+      color: rgba(229, 231, 235, 0.85);
+      position: relative;
+    }
+    .macos-bar .apple { font-weight: 700; }
+    .macos-bar .menu { color: rgba(229,231,235,0.7); }
+    .macos-bar .menu.active { color: white; font-weight: 600; }
+    .macos-bar .right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+      color: rgba(229,231,235,0.75);
+    }
+
+    /* 状态灯组件 */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .status-pill:hover { background: rgba(255,255,255,0.08); }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transition: all 0.3s;
+      background: var(--gray);
+      box-shadow: 0 0 0 0 rgba(0,0,0,0);
+    }
+    .dot.idle { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .dot.running { background: var(--yellow); box-shadow: 0 0 6px rgba(234,179,8,0.55); animation: pulse 1.4s ease-in-out infinite; }
+    .dot.waiting { background: var(--orange); box-shadow: 0 0 8px rgba(245,158,11,0.7); animation: blink 0.8s linear infinite; }
+    .dot.error { background: var(--red); box-shadow: 0 0 10px rgba(239,68,68,0.8); animation: shake 0.4s linear infinite; }
+    .label-mini {
+      font-size: 12px;
+      color: rgba(229,231,235,0.75);
+      font-variant-numeric: tabular-nums;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.18); opacity: 1; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-0.5px); }
+      75% { transform: translateX(0.5px); }
+    }
+
+    /* 下拉详情面板 */
+    .popover-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      padding-top: 60px;
+    }
+    .desktop-hint {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: var(--dim);
+      letter-spacing: 0.04em;
+    }
+    .popover {
+      width: 320px;
+      background: rgba(28, 28, 36, 0.95);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    }
+    .popover .head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .popover .title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .popover .icon-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+    }
+    .agent-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .agent-row:last-child { border-bottom: 0; }
+    .agent-name {
+      font-size: 13px;
+      font-weight: 500;
+      flex: 1;
+    }
+    .agent-state {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .agent-meta {
+      font-size: 11px;
+      color: var(--dim);
+      font-variant-numeric: tabular-nums;
+    }
+    .agent-name-block { flex: 1; }
+    .footer-actions {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* 控制条 */
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .controls .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 6px;
+    }
+    .btn {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .btn:hover { background: rgba(255,255,255,0.04); border-color: #2a2a35; }
+    .btn.active {
+      background: rgba(168, 85, 247, 0.12);
+      border-color: rgba(168, 85, 247, 0.45);
+      color: #d8b4fe;
+    }
+    .btn .led {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .btn .led.idle    { background: var(--green); }
+    .btn .led.running { background: var(--yellow); }
+    .btn .led.waiting { background: var(--orange); }
+    .btn .led.error   { background: var(--red); }
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .meta-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .meta-card .k { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+    .meta-card .v { font-size: 15px; margin-top: 4px; font-weight: 600; }
+    .meta-card .vd { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    a.back { color: var(--muted); text-decoration: none; font-size: 12px; }
+    a.back:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>形态 01 · 菜单栏小图标</h1>
+      <div class="desc">macOS 顶栏 / Windows 托盘的一颗小圆点。极简、不打扰,悬停展开完整 agent 详情。</div>
+    </div>
+    <a class="back" href="index.html">← 返回总览</a>
+  </div>
+
+  <div class="stage">
+    <!-- 模拟 macOS 顶栏 -->
+    <div class="macos-bar">
+      <span class="apple"></span>
+      <span class="menu active">Cursor</span>
+      <span class="menu">File</span>
+      <span class="menu">Edit</span>
+      <span class="menu">View</span>
+      <span class="menu">Go</span>
+      <span class="menu">Window</span>
+      <span class="menu">Help</span>
+      <div class="right">
+        <span class="status-pill" id="pill">
+          <span class="dot" id="dotBar"></span>
+          <span class="label-mini" id="labelMini">空闲</span>
+        </span>
+        <span>BT</span>
+        <span>WiFi</span>
+        <span>100%</span>
+        <span>20:46</span>
+      </div>
+    </div>
+
+    <div class="popover-wrap">
+      <div class="desktop-hint">↑ 用户点击菜单栏小圆点后展开</div>
+      <div class="popover">
+        <div class="head">
+          <div class="title">Agent Status Light</div>
+          <div class="icon-btn">⋯</div>
+        </div>
+        <div class="agent-row">
+          <span class="dot" id="dotClaude"></span>
+          <div class="agent-name-block">
+            <div class="agent-name">Claude Code</div>
+            <div class="agent-state" id="claudeState">运行中 · read_file src/server.go</div>
+          </div>
+          <div class="agent-meta" id="claudeMeta">12s</div>
+        </div>
+        <div class="agent-row">
+          <span class="dot" id="dotCodex"></span>
+          <div class="agent-name-block">
+            <div class="agent-name">Codex</div>
+            <div class="agent-state" id="codexState">空闲</div>
+          </div>
+          <div class="agent-meta" id="codexMeta">just now</div>
+        </div>
+        <div class="agent-row">
+          <span class="dot" id="dotCursor"></span>
+          <div class="agent-name-block">
+            <div class="agent-name">Cursor</div>
+            <div class="agent-state" id="cursorState">等待你授权 Run command</div>
+          </div>
+          <div class="agent-meta" id="cursorMeta">3s</div>
+        </div>
+        <div class="footer-actions">
+          <span>3 agents · 1 active</span>
+          <span>设置</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <span class="label">模拟主灯状态</span>
+    <button class="btn" data-state="idle"><span class="led idle"></span>空闲</button>
+    <button class="btn" data-state="running"><span class="led running"></span>运行中</button>
+    <button class="btn" data-state="waiting"><span class="led waiting"></span>等待用户</button>
+    <button class="btn" data-state="error"><span class="led error"></span>异常</button>
+    <span style="margin-left:auto; font-size:11px; color:var(--muted);">自动每 3.5s 切换 · 点击按钮锁定</span>
+  </div>
+
+  <div class="meta">
+    <div class="meta-card">
+      <div class="k">截图传播力</div>
+      <div class="v">★★ / 5</div>
+      <div class="vd">视觉信息量低,截图无吸引力</div>
+    </div>
+    <div class="meta-card">
+      <div class="k">实现难度</div>
+      <div class="v">★ / 5</div>
+      <div class="vd">系统 systray API 1 天搞定</div>
+    </div>
+    <div class="meta-card">
+      <div class="k">主要受众</div>
+      <div class="v">极简派</div>
+      <div class="vd">不喜欢任何视觉打扰</div>
+    </div>
+    <div class="meta-card">
+      <div class="k">综合评分</div>
+      <div class="v">★★★ / 5</div>
+      <div class="vd">作为辅助形态可,作主形态弱</div>
+    </div>
+  </div>
+
+  <script>
+    const states = ['idle','running','waiting','error'];
+    const labelMap = { idle:'空闲', running:'运行中', waiting:'等待', error:'异常' };
+    let auto = true;
+    let idx = 0;
+    function setState(s){
+      const dotBar = document.getElementById('dotBar');
+      dotBar.className = 'dot ' + s;
+      document.getElementById('labelMini').textContent = labelMap[s];
+      // 三个 agent 各自映射
+      const dotClaude = document.getElementById('dotClaude');
+      const dotCodex = document.getElementById('dotCodex');
+      const dotCursor = document.getElementById('dotCursor');
+      if (s === 'idle')    { dotClaude.className='dot idle';    dotCodex.className='dot idle';    dotCursor.className='dot idle';    document.getElementById('claudeState').textContent='空闲 · just now'; document.getElementById('cursorState').textContent='空闲 · just now'; }
+      if (s === 'running') { dotClaude.className='dot running'; dotCodex.className='dot idle';    dotCursor.className='dot idle';    document.getElementById('claudeState').textContent='运行中 · read_file src/server.go'; document.getElementById('cursorState').textContent='空闲 · just now'; }
+      if (s === 'waiting') { dotClaude.className='dot running'; dotCodex.className='dot idle';    dotCursor.className='dot waiting'; document.getElementById('claudeState').textContent='运行中 · run_terminal_cmd'; document.getElementById('cursorState').textContent='等待你授权 Run command'; }
+      if (s === 'error')   { dotClaude.className='dot error';   dotCodex.className='dot idle';    dotCursor.className='dot idle';    document.getElementById('claudeState').textContent='API 限流 · 429 Too Many Requests'; document.getElementById('cursorState').textContent='空闲 · just now'; }
+      document.querySelectorAll('.btn[data-state]').forEach(b => {
+        b.classList.toggle('active', b.dataset.state === s);
+      });
+    }
+    document.querySelectorAll('.btn[data-state]').forEach(b => {
+      b.addEventListener('click', () => { auto = false; setState(b.dataset.state); });
+    });
+    setState(states[0]);
+    setInterval(() => {
+      if (!auto) return;
+      idx = (idx + 1) % states.length;
+      setState(states[idx]);
+    }, 3500);
+  </script>
+</body>
+</html>
