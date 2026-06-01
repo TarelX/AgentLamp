@@ -1,0 +1,143 @@
+/* 物理灯模拟 - 严格对齐 ui/03-物理灯模拟.html. */
+
+.agent-lamp-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 40px;
+}
+
+.traffic-light {
+  width: 160px;
+  padding: 16px 14px;
+  background: linear-gradient(180deg, #2a2c34 0%, #1a1c22 100%);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.5),
+    0 30px 60px rgba(0, 0, 0, 0.6),
+    0 10px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  position: relative;
+}
+
+.traffic-light::before {
+  content: '';
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 36px;
+  background: linear-gradient(180deg, #1a1c22, #2a2c34);
+  border-radius: 4px 4px 0 0;
+}
+
+.traffic-light::after {
+  content: 'AGENT v0.1';
+  position: absolute;
+  bottom: -24px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: #4b5563;
+}
+
+.bulb {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #0a0a0d;
+  box-shadow:
+    inset 0 4px 10px rgba(0, 0, 0, 0.8),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.04),
+    0 0 0 6px rgba(0, 0, 0, 0.4);
+  position: relative;
+  transition: all 0.4s;
+}
+
+.bulb::after {
+  content: '';
+  position: absolute;
+  top: 18%;
+  left: 22%;
+  width: 35%;
+  height: 25%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.45), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.bulb.on::after {
+  opacity: 1;
+}
+
+.bulb.red-on {
+  background: #ef4444;
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(239, 68, 68, 0.85),
+    0 0 90px rgba(239, 68, 68, 0.4);
+}
+
+.bulb.yellow-on {
+  background: #f59e0b;
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(245, 158, 11, 0.85),
+    0 0 90px rgba(245, 158, 11, 0.4);
+}
+
+.bulb.green-on {
+  background: #22c55e;
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(34, 197, 94, 0.85),
+    0 0 90px rgba(34, 197, 94, 0.4);
+}
+
+.bulb.running {
+  animation: bulb-pulse 1.4s ease-in-out infinite;
+}
+
+.bulb.waiting {
+  animation: bulb-blink 0.9s linear infinite;
+}
+
+.bulb.fault-blink {
+  animation: bulb-blink 0.6s linear infinite;
+}
+
+@keyframes bulb-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes bulb-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.lamp-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
