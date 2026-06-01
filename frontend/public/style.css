@@ -118,6 +118,36 @@ a:hover {
   width: 140px;
 }
 
+.agents-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.agent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #14141a;
+  border: 1px solid #1f1f28;
+  font-size: 11px;
+  color: #d1d5db;
+}
+
+.agent-chip.disabled {
+  opacity: 0.4;
+}
+
+.agent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
+}
+
 .app-footer {
   font-size: 11px;
   color: #4b5563;
