@@ -1,5 +1,3 @@
-/* 物理灯模拟 - 严格对齐 ui/03-物理灯模拟.html. */
-
 .agent-lamp-stage {
   display: flex;
   flex-direction: column;

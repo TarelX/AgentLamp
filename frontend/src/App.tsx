@@ -30,7 +30,7 @@ function App() {
     setGlobalVolume(globalVolume);
   }, [globalVolume]);
 
-  // 状态进入 waiting / error / fault 时播放对应默认音效, 仅在状态变化的瞬间触发.
+  // 仅在状态变化的边沿播放, 防止持续 waiting / error 期间重复响铃
   useEffect(() => {
     if (muted) return;
     if (prevState.current !== mainState) {

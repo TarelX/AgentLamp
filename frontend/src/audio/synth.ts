@@ -1,5 +1,4 @@
-// Web Audio API 实时合成器, 迁移自 ui/audio-preview.html.
-// 零文件, 跨平台一致, 完全代码化.
+/** Web Audio API 实时合成: 零文件, 跨平台一致 */
 
 export type Wave = 'square' | 'sine' | 'triangle' | 'sawtooth';
 
@@ -21,6 +20,7 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
+/** 设置全局音量 (0..1), 与各 preset 自带音量相乘 */
 export function setGlobalVolume(volume: number): void {
   globalVolume = Math.max(0, Math.min(1, volume));
 }
@@ -29,6 +29,7 @@ export function getGlobalVolume(): number {
   return globalVolume;
 }
 
+/** 全局静音开关; 静音时 playSequence/playGlide 无副作用 */
 export function setMuted(muted: boolean): void {
   userMuted = muted;
 }
@@ -37,8 +38,7 @@ export function isMuted(): boolean {
   return userMuted;
 }
 
-// 浏览器/WebView2 通常要求用户首次交互后才能解锁 AudioContext.
-// 在 App 启动后第一次点击/键盘事件里调用一次即可.
+/** 浏览器与 WebView2 要求用户手势后才能播放音频, 启动时调一次即可 */
 export function unlockAudio(): void {
   const ctx = getCtx();
   if (ctx && ctx.state === 'suspended') {
@@ -49,13 +49,17 @@ export function unlockAudio(): void {
 export interface SequenceOptions {
   wave?: Wave;
   freqs: number[];
-  duration: number; // 单声时长 ms
-  gap?: number; // 间隔 ms
-  times: number; // 重复次数
-  volume?: number; // 0..1, 与全局相乘
+  /** 单声时长, 毫秒 */
+  duration: number;
+  /** 两声之间的静音, 毫秒 */
+  gap?: number;
+  times: number;
+  /** 0..1, 与全局音量相乘 */
+  volume?: number;
   envelope?: Envelope;
 }
 
+/** 顺序播放一组等参数音; freqs 长度小于 times 时循环取用 */
 export function playSequence(opts: SequenceOptions): void {
   if (userMuted) return;
   const ctx = getCtx();
@@ -109,6 +113,7 @@ export interface GlideOptions {
   volume?: number;
 }
 
+/** 单声滑音, 频率从 freqStart 线性滑到 freqEnd */
 export function playGlide(opts: GlideOptions): void {
   if (userMuted) return;
   const ctx = getCtx();

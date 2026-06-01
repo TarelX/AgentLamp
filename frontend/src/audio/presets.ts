@@ -12,10 +12,9 @@ export interface SoundPreset {
   play: () => void;
 }
 
-// 4 类共 20 个 preset, 全部参数对齐 ui/audio-preview.html.
-// 推荐项: W1 (waiting), E1 (error), D1 (done), R1 (real).
+/** 20 个内置音效预设, 4 类: waiting / error / done / real */
 export const SOUND_PRESETS: readonly SoundPreset[] = [
-  // ---------- 1. 等待用户授权 (waiting) - 6 个 ----------
+  // waiting (6)
   {
     id: 'W1',
     category: 'waiting',
@@ -90,7 +89,7 @@ export const SOUND_PRESETS: readonly SoundPreset[] = [
       playSequence({ wave: 'sine', freqs: [1200], duration: 150, gap: 100, times: 2, volume: 0.6 }),
   },
 
-  // ---------- 2. 错误警报 (error) - 5 个 ----------
+  // error (5)
   {
     id: 'E1',
     category: 'error',
@@ -141,7 +140,7 @@ export const SOUND_PRESETS: readonly SoundPreset[] = [
       playSequence({ wave: 'sawtooth', freqs: [300], duration: 400, gap: 0, times: 1, volume: 0.5 }),
   },
 
-  // ---------- 3. 任务完成 (done) - 4 个, 默认全部关 ----------
+  // done (4) — 默认关
   {
     id: 'D1',
     category: 'done',
@@ -204,7 +203,7 @@ export const SOUND_PRESETS: readonly SoundPreset[] = [
       }),
   },
 
-  // ---------- 4. 真实红绿灯模拟 (real) - 5 个 ----------
+  // real (5) — 真实路口红绿灯参考音
   {
     id: 'R1',
     category: 'real',
@@ -275,7 +274,7 @@ export function presetsByCategory(category: SoundCategory): readonly SoundPreset
   return SOUND_PRESETS.filter((p) => p.category === category);
 }
 
-// 默认绑定: waiting → W1, error → E1
+/** 状态到默认音效的绑定; null 表示该状态默认静音 */
 export const DEFAULT_PRESET_BINDINGS: Record<'waiting' | 'error' | 'done', string | null> = {
   waiting: 'W1',
   error: 'E1',
