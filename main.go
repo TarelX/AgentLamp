@@ -12,6 +12,7 @@ import (
 	"github.com/TarelX/AgentLamp/backend"
 	"github.com/TarelX/AgentLamp/backend/adapters"
 	"github.com/TarelX/AgentLamp/backend/aggregator"
+	"github.com/TarelX/AgentLamp/backend/icon"
 	"github.com/TarelX/AgentLamp/backend/server"
 	"github.com/TarelX/AgentLamp/backend/service"
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -29,7 +30,6 @@ func init() {
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	// 先建聚合器再构造依赖它的 service; 拿到 app 后回填以便发事件
 	agg := aggregator.New(nil, []backend.AgentName{
 		backend.AgentClaude,
 		backend.AgentCursor,
@@ -49,13 +49,18 @@ func main() {
 			application.NewService(installSvc),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
 	})
 	agg.SetApp(app)
+
+	lamp := buildLampWindow(app)
+	settings := buildSettingsWindow(app)
+	tray := buildSystemTray(app, agg, lamp, settings)
+	_ = tray
 
 	hookSrv := server.New(webhookAddr, logger)
 	hookSrv.Register(backend.AgentClaude, adapters.NewClaudeAdapter(agg))
@@ -75,19 +80,6 @@ func main() {
 		}
 	}()
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "AgentLamp",
-		Width:            360,
-		Height:           640,
-		BackgroundColour: application.NewRGB(10, 10, 15),
-		URL:              "/",
-		Mac: application.MacWindow{
-			InvisibleTitleBarHeight: 50,
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInset,
-		},
-	})
-
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -96,4 +88,81 @@ func main() {
 	defer cancel()
 	_ = hookSrv.Stop(ctx)
 	agg.Stop()
+}
+
+// buildLampWindow 构造主窗口: 透明置顶可拖动小窗, 仅渲染物理灯
+func buildLampWindow(app *application.App) *application.WebviewWindow {
+	return app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:               "AgentLamp",
+		Width:               240,
+		Height:              360,
+		MinWidth:            200,
+		MinHeight:           300,
+		URL:                 "/",
+		Frameless:           true,
+		AlwaysOnTop:         true,
+		BackgroundType:      application.BackgroundTypeTransparent,
+		BackgroundColour:    application.NewRGBA(0, 0, 0, 0),
+		MinimiseButtonState: application.ButtonHidden,
+		MaximiseButtonState: application.ButtonHidden,
+		CloseButtonState:    application.ButtonHidden,
+		InitialPosition:     application.WindowCentered,
+		Windows: application.WindowsWindow{
+			DisableFramelessWindowDecorations: true,
+		},
+		Mac: application.MacWindow{
+			InvisibleTitleBarHeight: 0,
+			Backdrop:                application.MacBackdropTransparent,
+			TitleBar:                application.MacTitleBarHidden,
+		},
+	})
+}
+
+// buildSettingsWindow 构造独立设置窗口, 启动时隐藏, 由托盘菜单触发显示
+func buildSettingsWindow(app *application.App) *application.WebviewWindow {
+	return app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "AgentLamp · 设置",
+		Width:            860,
+		Height:           640,
+		MinWidth:         640,
+		MinHeight:        480,
+		URL:              "/settings",
+		Hidden:           true,
+		BackgroundColour: application.NewRGB(10, 10, 15),
+	})
+}
+
+// buildSystemTray 创建托盘图标 + 右键菜单, 并订阅主灯状态变化更新图标
+func buildSystemTray(
+	app *application.App,
+	agg *aggregator.Aggregator,
+	lamp *application.WebviewWindow,
+	settings *application.WebviewWindow,
+) *application.SystemTray {
+	tray := app.SystemTray.New()
+	tray.SetTooltip("AgentLamp")
+	tray.SetIcon(icon.PNGForState(agg.Snapshot().MainState))
+	tray.AttachWindow(lamp)
+
+	menu := application.NewMenu()
+	menu.Add("显示 / 隐藏主灯").OnClick(func(*application.Context) {
+		if lamp.IsVisible() {
+			lamp.Hide()
+		} else {
+			lamp.Show().Focus()
+		}
+	})
+	menu.Add("打开设置…").OnClick(func(*application.Context) {
+		settings.Show().Focus()
+	})
+	menu.AddSeparator()
+	menu.Add("退出").OnClick(func(*application.Context) {
+		app.Quit()
+	})
+	tray.SetMenu(menu)
+
+	agg.Subscribe(func(snap backend.Snapshot) {
+		tray.SetIcon(icon.PNGForState(snap.MainState))
+	})
+	return tray
 }

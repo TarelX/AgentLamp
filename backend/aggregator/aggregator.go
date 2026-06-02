@@ -12,12 +12,20 @@ import (
 
 // Aggregator 状态聚合器, 单实例由 main.go 持有并注入到各 adapter
 type Aggregator struct {
-	mu      sync.RWMutex
-	agents  map[backend.AgentName]backend.AgentStatus
-	main    backend.AggregatedState
-	updates chan backend.AgentStatus
-	app     *application.App
-	stop    chan struct{}
+	mu          sync.RWMutex
+	agents      map[backend.AgentName]backend.AgentStatus
+	main        backend.AggregatedState
+	updates     chan backend.AgentStatus
+	app         *application.App
+	stop        chan struct{}
+	subscribers []func(backend.Snapshot)
+}
+
+// Subscribe 注册一个回调, 主灯状态变化时会被调用 (在 emit 同一线程, 不要长阻塞)
+func (a *Aggregator) Subscribe(fn func(backend.Snapshot)) {
+	a.mu.Lock()
+	a.subscribers = append(a.subscribers, fn)
+	a.mu.Unlock()
 }
 
 // SetApp 在 app 创建后回填引用, 用于后续 emit event
@@ -171,8 +179,14 @@ func (a *Aggregator) snapshotLocked() backend.Snapshot {
 }
 
 func (a *Aggregator) emit(snap backend.Snapshot) {
-	if a.app == nil {
-		return
+	a.mu.RLock()
+	subs := make([]func(backend.Snapshot), len(a.subscribers))
+	copy(subs, a.subscribers)
+	a.mu.RUnlock()
+	for _, fn := range subs {
+		fn(snap)
 	}
-	a.app.Event.Emit(backend.EventStatusUpdate, snap)
+	if a.app != nil {
+		a.app.Event.Emit(backend.EventStatusUpdate, snap)
+	}
 }
