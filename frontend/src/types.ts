@@ -43,6 +43,17 @@ export const AGENT_DISPLAY: Record<AgentName, string> = {
   windsurf: 'Windsurf',
 };
 
+/** 物理灯铭牌用的紧凑名 (大写, 适合刻在金属壳上) */
+export const AGENT_BADGE: Record<AgentName, string> = {
+  claude: 'CLAUDE',
+  codex: 'CODEX',
+  cursor: 'CURSOR',
+  cline: 'CLINE',
+  aider: 'AIDER',
+  continue: 'CONTINUE',
+  windsurf: 'WINDSURF',
+};
+
 export interface AgentStatus {
   name: AgentName;
   state: AggregatedState;

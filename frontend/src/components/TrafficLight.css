@@ -38,12 +38,13 @@
 }
 
 .traffic-light::after {
-  content: 'AGENT v0.1';
+  content: var(--lamp-label, 'AGENTLAMP');
   position: absolute;
   bottom: -24px;
   font-size: 9px;
   letter-spacing: 0.2em;
   color: #4b5563;
+  white-space: nowrap;
 }
 
 .bulb {

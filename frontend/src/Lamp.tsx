@@ -3,6 +3,7 @@ import { Events } from '@wailsio/runtime';
 import { TrafficLight } from './components/TrafficLight';
 import { findPreset, DEFAULT_PRESET_BINDINGS } from './audio/presets';
 import { unlockAudio } from './audio/synth';
+import { dominantAgentBadge } from './hooks/useDominantAgent';
 import type { AggregatedState } from './types';
 import * as StatusService from '../bindings/github.com/TarelX/AgentLamp/backend/service/statusservice';
 import * as WindowService from '../bindings/github.com/TarelX/AgentLamp/backend/service/windowservice';
@@ -10,20 +11,27 @@ import * as WindowService from '../bindings/github.com/TarelX/AgentLamp/backend/
 /** 悬浮模式: 透明置顶可拖动小灯, 双击切回完整窗口 */
 function Lamp() {
   const [state, setState] = useState<AggregatedState>('idle');
+  const [badge, setBadge] = useState<string>('AGENTLAMP');
   const prev = useRef<AggregatedState>('idle');
 
   useEffect(() => {
     let cancelled = false;
+    const apply = (raw: unknown) => {
+      if (!raw || typeof raw !== 'object') return;
+      const snap = raw as { mainState?: AggregatedState; agents?: unknown };
+      if (snap.mainState) setState(snap.mainState);
+      setBadge(dominantAgentBadge(snap.agents as never));
+    };
+
     StatusService.GetSnapshot()
       .then((snap) => {
         if (cancelled) return;
-        if (snap.mainState) setState(snap.mainState as AggregatedState);
+        apply(snap);
       })
       .catch(() => undefined);
     const off = Events.On('status:update', (evt: { data?: unknown }) => {
       if (cancelled) return;
-      const raw = evt.data as { mainState?: AggregatedState } | undefined;
-      if (raw?.mainState) setState(raw.mainState);
+      apply(evt.data);
     });
     return () => {
       cancelled = true;
@@ -52,7 +60,7 @@ function Lamp() {
       onDoubleClick={() => void WindowService.SwitchToFull()}
       title="双击切回主窗口"
     >
-      <TrafficLight state={state} showLabel={false} />
+      <TrafficLight state={state} showLabel={false} badgeText={badge} />
     </div>
   );
 }

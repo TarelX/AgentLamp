@@ -10,6 +10,7 @@ import {
   AGENT_DISPLAY,
   STATE_LABEL,
 } from './types';
+import { dominantAgentBadge } from './hooks/useDominantAgent';
 import * as StatusService from '../bindings/github.com/TarelX/AgentLamp/backend/service/statusservice';
 import * as InstallService from '../bindings/github.com/TarelX/AgentLamp/backend/service/installservice';
 import * as WindowService from '../bindings/github.com/TarelX/AgentLamp/backend/service/windowservice';
@@ -195,7 +196,7 @@ function MainWindow() {
       </header>
 
       <div className="main-stage">
-        <TrafficLight state={mainState} showLabel={false} />
+        <TrafficLight state={mainState} showLabel={false} badgeText={dominantAgentBadge(agents)} />
       </div>
 
       {agents.length > 0 && (
