@@ -47,7 +47,12 @@ func EnsureRelayScript(webhookBase string) (string, error) {
 	target := filepath.Join(dir, RelayScriptName())
 	cleanupOldScripts(dir)
 	content := relayScriptContent(webhookBase)
-	if err := os.WriteFile(target, []byte(content), 0o755); err != nil {
+	data := []byte(content)
+	if runtime.GOOS == "windows" {
+		// Windows PowerShell 5.x 在中文系统默认按 ANSI 读 .ps1, 加 UTF-8 BOM 强制 UTF-8 解析
+		data = append([]byte{0xEF, 0xBB, 0xBF}, data...)
+	}
+	if err := os.WriteFile(target, data, 0o755); err != nil {
 		return "", err
 	}
 	return target, nil
