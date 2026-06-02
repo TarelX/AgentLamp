@@ -134,8 +134,8 @@ func (c *CursorInstaller) Status() (InstallStatus, error) {
 func (c *CursorInstaller) buildCommand(event string) string {
 	url := fmt.Sprintf("%s/hook/cursor/%s", c.webhookBase, event)
 	return fmt.Sprintf(
-		`curl -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- %s # %s`,
-		url, AgentLampMarker,
+		`"%s" -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- %s # %s`,
+		curlExecutable(), url, AgentLampMarker,
 	)
 }
 

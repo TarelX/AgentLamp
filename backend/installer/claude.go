@@ -8,9 +8,24 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
+
+// curlExecutable Windows 上 IDE 子进程的 PATH 不一定含 System32, 用绝对路径更稳
+func curlExecutable() string {
+	if runtime.GOOS == "windows" {
+		if sys := os.Getenv("SystemRoot"); sys != "" {
+			candidate := filepath.Join(sys, "System32", "curl.exe")
+			if _, err := os.Stat(candidate); err == nil {
+				return candidate
+			}
+		}
+		return `C:\Windows\System32\curl.exe`
+	}
+	return "curl"
+}
 
 // AgentLampMarker 嵌在 hook 命令中, 用于识别哪些 hook 是本应用安装的
 const AgentLampMarker = "AGENTLAMP_V1"
@@ -156,8 +171,8 @@ func (c *ClaudeInstaller) Uninstall() error {
 func (c *ClaudeInstaller) buildCommand(event string) string {
 	url := fmt.Sprintf("%s/hook/claude/%s", c.webhookBase, event)
 	return fmt.Sprintf(
-		`curl -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- %s # %s`,
-		url, AgentLampMarker,
+		`"%s" -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- %s # %s`,
+		curlExecutable(), url, AgentLampMarker,
 	)
 }
 
