@@ -16,6 +16,7 @@ import (
 	"github.com/TarelX/AgentLamp/backend/server"
 	"github.com/TarelX/AgentLamp/backend/service"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/dist
@@ -69,6 +70,12 @@ func main() {
 	lampWin := buildLampWindow(app)
 	winSvc.SetWindows(mainWin, lampWin)
 
+	// 主窗口的关闭按钮 = 退出整个应用 (与 Windows 用户预期一致);
+	// 切换悬浮模式时主窗口走 Hide() 路径不会触发 WindowClosing
+	mainWin.OnWindowEvent(events.Common.WindowClosing, func(*application.WindowEvent) {
+		app.Quit()
+	})
+
 	tray := buildSystemTray(app, agg, winSvc, mainWin, lampWin)
 	_ = tray
 
@@ -113,12 +120,19 @@ func buildMainWindow(app *application.App) *application.WebviewWindow {
 	})
 }
 
-// buildLampWindow 透明置顶悬浮小灯, 默认隐藏, 由"悬浮模式"开关或托盘菜单激活
+// buildLampWindow 悬浮小灯; v0.1 暂不用 WindowMask (Wails v3 alpha
+// UpdateLayeredWindow 调用 size 与 position 参数错置, 见 v0.2 计划),
+// 仅靠 Frameless + Transparent + 锁死尺寸提供基本悬浮窗体验.
 func buildLampWindow(app *application.App) *application.WebviewWindow {
+	const w, h = 220, 380
 	return app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:               "AgentLamp · Floating",
-		Width:               220,
-		Height:              340,
+		Width:               w,
+		Height:              h,
+		MinWidth:            w,
+		MinHeight:           h,
+		MaxWidth:            w,
+		MaxHeight:           h,
 		URL:                 "/?mode=lamp",
 		Frameless:           true,
 		AlwaysOnTop:         true,
@@ -130,6 +144,7 @@ func buildLampWindow(app *application.App) *application.WebviewWindow {
 		CloseButtonState:    application.ButtonHidden,
 		Windows: application.WindowsWindow{
 			DisableFramelessWindowDecorations: true,
+			HiddenOnTaskbar:                   true,
 		},
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropTransparent,
