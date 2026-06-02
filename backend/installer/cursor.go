@@ -138,7 +138,7 @@ func (c *CursorInstaller) Status() (InstallStatus, error) {
 }
 
 func (c *CursorInstaller) buildCommand(event string) string {
-	return fmt.Sprintf(`"%s" cursor %s # %s`, c.relayScript, event, AgentLampMarker)
+	return fmt.Sprintf(HookCommandTemplate(c.relayScript), "cursor", event, AgentLampMarker)
 }
 
 func removeAgentLampCursor(entries []cursorHookEntry) []cursorHookEntry {

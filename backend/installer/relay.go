@@ -7,15 +7,15 @@ import (
 	"runtime"
 )
 
-// RelayScriptName hook IDE 调用的中继脚本名; cmd / sh 两种实现
+// RelayScriptName Windows 用 .ps1 (spawn 不能直接跑 .cmd, 必须 PowerShell)
 func RelayScriptName() string {
 	if runtime.GOOS == "windows" {
-		return "hook-relay.cmd"
+		return "hook-relay.ps1"
 	}
 	return "hook-relay.sh"
 }
 
-// AgentLampConfigDir AgentLamp 的用户配置目录, 存放 relay 脚本与日志
+// AgentLampConfigDir 用户配置目录, 存放 relay 脚本与日志
 func AgentLampConfigDir() (string, error) {
 	if runtime.GOOS == "windows" {
 		appdata := os.Getenv("APPDATA")
@@ -45,6 +45,7 @@ func EnsureRelayScript(webhookBase string) (string, error) {
 		return "", err
 	}
 	target := filepath.Join(dir, RelayScriptName())
+	cleanupOldScripts(dir)
 	content := relayScriptContent(webhookBase)
 	if err := os.WriteFile(target, []byte(content), 0o755); err != nil {
 		return "", err
@@ -52,20 +53,65 @@ func EnsureRelayScript(webhookBase string) (string, error) {
 	return target, nil
 }
 
+// cleanupOldScripts 删掉早期版本遗留的 hook-relay.cmd, 避免 Cursor 仍解析旧路径
+func cleanupOldScripts(dir string) {
+	if runtime.GOOS == "windows" {
+		_ = os.Remove(filepath.Join(dir, "hook-relay.cmd"))
+	}
+}
+
 func relayScriptContent(webhookBase string) string {
 	if runtime.GOOS == "windows" {
-		// %~1 = agent, %~2 = event; stdin 透传给 curl, 失败静默不打断 Cursor / Claude
-		return fmt.Sprintf("@echo off\r\n"+
-			"set \"AGENT=%%~1\"\r\n"+
-			"set \"EVT=%%~2\"\r\n"+
-			"echo [%%date%% %%time%%] %%AGENT%% %%EVT%% >>\"%%~dp0hook.log\"\r\n"+
-			"\"C:\\Windows\\System32\\curl.exe\" -s -m 2 -X POST -H \"Content-Type: application/json\" --data-binary @- \"%s/hook/%%AGENT%%/%%EVT%%\" 1>>\"%%~dp0hook.log\" 2>&1\r\n"+
-			"exit /b 0\r\n", webhookBase)
+		return fmt.Sprintf(`# AgentLamp hook relay (Windows / PowerShell)
+# 由 ~/.cursor/hooks.json 与 ~/.claude/settings.json 调用
+# 用法: powershell -ExecutionPolicy Bypass -File hook-relay.ps1 <agent> <event>
+param(
+    [Parameter(Position=0)] [string] $Agent,
+    [Parameter(Position=1)] [string] $Event
+)
+
+$WebhookBase = '%s'
+$Url = "$WebhookBase/hook/$Agent/$Event"
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$LogFile = Join-Path $ScriptDir 'hook.log'
+
+try {
+    $body = [Console]::In.ReadToEnd()
+    "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Agent $Event" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
+    if ([string]::IsNullOrEmpty($body)) {
+        Invoke-RestMethod -Uri $Url -Method Post -ContentType 'application/json' -TimeoutSec 2 -ErrorAction Stop | Out-Null
+    } else {
+        Invoke-RestMethod -Uri $Url -Method Post -Body $body -ContentType 'application/json' -TimeoutSec 2 -ErrorAction Stop | Out-Null
+    }
+} catch {
+    "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Agent $Event ERROR: $_" | Out-File -FilePath $LogFile -Encoding UTF8 -Append
+}
+
+Write-Output '{}'
+exit 0
+`, webhookBase)
 	}
-	return fmt.Sprintf("#!/bin/sh\n"+
-		"AGENT=\"$1\"\n"+
-		"EVT=\"$2\"\n"+
-		"DIR=$(dirname \"$0\")\n"+
-		"echo \"[$(date)] $AGENT $EVT\" >>\"$DIR/hook.log\"\n"+
-		"exec curl -s -m 2 -X POST -H \"Content-Type: application/json\" --data-binary @- \"%s/hook/$AGENT/$EVT\" >>\"$DIR/hook.log\" 2>&1\n", webhookBase)
+
+	return fmt.Sprintf(`#!/bin/sh
+# AgentLamp hook relay (POSIX)
+AGENT="$1"
+EVT="$2"
+DIR=$(dirname "$0")
+LOG="$DIR/hook.log"
+echo "[$(date '+%%F %%T')] $AGENT $EVT" >>"$LOG"
+exec curl -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- "%s/hook/$AGENT/$EVT" >>"$LOG" 2>&1
+`, webhookBase)
+}
+
+// HookCommandTemplate 平台特定的 hook 命令模板;
+// 调用方按 Sprintf(template, agent, event, marker) 拼出完整命令字符串
+func HookCommandTemplate(relayPath string) string {
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf(
+			`powershell -ExecutionPolicy Bypass -File "%s" %%s %%s # %%s`,
+			relayPath,
+		)
+	}
+	return fmt.Sprintf(`"%s" %%s %%s # %%s`, relayPath)
 }

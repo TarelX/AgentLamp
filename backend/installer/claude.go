@@ -160,7 +160,7 @@ func (c *ClaudeInstaller) Uninstall() error {
 }
 
 func (c *ClaudeInstaller) buildCommand(event string) string {
-	return fmt.Sprintf(`"%s" claude %s # %s`, c.relayScript, event, AgentLampMarker)
+	return fmt.Sprintf(HookCommandTemplate(c.relayScript), "claude", event, AgentLampMarker)
 }
 
 func removeAgentLamp(groups []hookGroup) []hookGroup {
