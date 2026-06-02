@@ -29,8 +29,7 @@ jobs:
             # .app bundle 留 v0.2 加签名/notarize 流程后再发
             artifact_path: bin/AgentLamp
             build_cmd: build
-          # 必须 24.04 Noble; 22.04 Jammy 没有 libwebkitgtk-6.0-dev (Wails v3 alpha 依赖)
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             artifact_name: AgentLamp-linux-amd64
             artifact_path: bin/AgentLamp
             build_cmd: build
@@ -54,15 +53,17 @@ jobs:
       # GTK 头文件必须在 wails3 CLI 安装之前就位, 否则 go install 编译失败.
       # Wails v3 alpha 已迁到 GTK4 + webkitgtk-6.0 (不是老的 webkit2gtk-4.1)
       - name: Install Linux deps (GTK4 + WebKitGTK 6.0)
-        if: matrix.os == 'ubuntu-latest'
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends \
             pkg-config \
             build-essential \
             libgtk-4-dev \
             libwebkitgtk-6.0-dev \
             libsoup-3.0-dev
+          # 确认 pkg-config 能找到 webkitgtk-6.0
+          pkg-config --exists webkitgtk-6.0 && echo "OK webkitgtk-6.0 found" || (echo "ERR: webkitgtk-6.0 still not found"; pkg-config --list-all | grep -i webkit; exit 1)
 
       - name: Install Wails v3 CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.96
