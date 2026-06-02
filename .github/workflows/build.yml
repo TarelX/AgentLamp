@@ -22,12 +22,17 @@ jobs:
           - os: windows-latest
             artifact_name: AgentLamp-windows-amd64
             artifact_path: bin/AgentLamp.exe
+            build_cmd: build
           - os: macos-latest
             artifact_name: AgentLamp-macos-arm64
-            artifact_path: bin/AgentLamp.app
+            # v0.1 mac 暂只发裸二进制, 用户自己 chmod +x 后跑;
+            # .app bundle 留 v0.2 加签名/notarize 流程后再发
+            artifact_path: bin/AgentLamp
+            build_cmd: build
           - os: ubuntu-latest
             artifact_name: AgentLamp-linux-amd64
             artifact_path: bin/AgentLamp
+            build_cmd: build
 
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +86,7 @@ jobs:
         run: wails3 generate bindings -ts -clean=true
 
       - name: Build
-        run: wails3 build
+        run: wails3 ${{ matrix.build_cmd }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
