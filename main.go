@@ -113,7 +113,7 @@ func buildLampWindow(app *application.App) *application.WebviewWindow {
 		Title:               "AgentLamp · Floating",
 		Width:               220,
 		Height:              340,
-		URL:                 "/lamp",
+		URL:                 "/?mode=lamp",
 		Frameless:           true,
 		AlwaysOnTop:         true,
 		Hidden:              true,
