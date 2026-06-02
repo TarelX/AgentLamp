@@ -14,6 +14,7 @@ import (
 type CursorInstaller struct {
 	hooksPath   string
 	webhookBase string
+	relayScript string
 }
 
 func NewCursorInstaller(webhookBase string) (*CursorInstaller, error) {
@@ -21,9 +22,14 @@ func NewCursorInstaller(webhookBase string) (*CursorInstaller, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get home dir: %w", err)
 	}
+	relay, err := EnsureRelayScript(webhookBase)
+	if err != nil {
+		return nil, fmt.Errorf("write relay script: %w", err)
+	}
 	return &CursorInstaller{
 		hooksPath:   filepath.Join(home, ".cursor", "hooks.json"),
 		webhookBase: strings.TrimRight(webhookBase, "/"),
+		relayScript: relay,
 	}, nil
 }
 
@@ -132,11 +138,7 @@ func (c *CursorInstaller) Status() (InstallStatus, error) {
 }
 
 func (c *CursorInstaller) buildCommand(event string) string {
-	url := fmt.Sprintf("%s/hook/cursor/%s", c.webhookBase, event)
-	return fmt.Sprintf(
-		`"%s" -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- %s # %s`,
-		curlExecutable(), url, AgentLampMarker,
-	)
+	return fmt.Sprintf(`"%s" cursor %s # %s`, c.relayScript, event, AgentLampMarker)
 }
 
 func removeAgentLampCursor(entries []cursorHookEntry) []cursorHookEntry {

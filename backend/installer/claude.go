@@ -8,24 +8,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 )
-
-// curlExecutable Windows 上 IDE 子进程的 PATH 不一定含 System32, 用绝对路径更稳
-func curlExecutable() string {
-	if runtime.GOOS == "windows" {
-		if sys := os.Getenv("SystemRoot"); sys != "" {
-			candidate := filepath.Join(sys, "System32", "curl.exe")
-			if _, err := os.Stat(candidate); err == nil {
-				return candidate
-			}
-		}
-		return `C:\Windows\System32\curl.exe`
-	}
-	return "curl"
-}
 
 // AgentLampMarker 嵌在 hook 命令中, 用于识别哪些 hook 是本应用安装的
 const AgentLampMarker = "AGENTLAMP_V1"
@@ -34,6 +19,7 @@ const AgentLampMarker = "AGENTLAMP_V1"
 type ClaudeInstaller struct {
 	settingsPath string
 	webhookBase  string
+	relayScript  string
 }
 
 // NewClaudeInstaller webhookBase 例如 "http://127.0.0.1:19840"
@@ -42,9 +28,14 @@ func NewClaudeInstaller(webhookBase string) (*ClaudeInstaller, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get home dir: %w", err)
 	}
+	relay, err := EnsureRelayScript(webhookBase)
+	if err != nil {
+		return nil, fmt.Errorf("write relay script: %w", err)
+	}
 	return &ClaudeInstaller{
 		settingsPath: filepath.Join(home, ".claude", "settings.json"),
 		webhookBase:  strings.TrimRight(webhookBase, "/"),
+		relayScript:  relay,
 	}, nil
 }
 
@@ -169,11 +160,7 @@ func (c *ClaudeInstaller) Uninstall() error {
 }
 
 func (c *ClaudeInstaller) buildCommand(event string) string {
-	url := fmt.Sprintf("%s/hook/claude/%s", c.webhookBase, event)
-	return fmt.Sprintf(
-		`"%s" -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- %s # %s`,
-		curlExecutable(), url, AgentLampMarker,
-	)
+	return fmt.Sprintf(`"%s" claude %s # %s`, c.relayScript, event, AgentLampMarker)
 }
 
 func removeAgentLamp(groups []hookGroup) []hookGroup {
