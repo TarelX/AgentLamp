@@ -76,7 +76,8 @@ func (c *ClaudeInstaller) IsInstalled() (bool, error) {
 	if !ok {
 		return false, nil
 	}
-	return strings.Contains(string(hooksRaw), AgentLampMarker), nil
+	body := string(hooksRaw)
+	return strings.Contains(body, RelayScriptName()) || strings.Contains(body, AgentLampMarker), nil
 }
 
 // Install 安装/更新 hooks; 第一次会备份原 settings.json
@@ -160,7 +161,7 @@ func (c *ClaudeInstaller) Uninstall() error {
 }
 
 func (c *ClaudeInstaller) buildCommand(event string) string {
-	return fmt.Sprintf(HookCommandTemplate(c.relayScript), "claude", event, AgentLampMarker)
+	return HookCommand(c.relayScript, "claude", event)
 }
 
 func removeAgentLamp(groups []hookGroup) []hookGroup {
@@ -168,7 +169,7 @@ func removeAgentLamp(groups []hookGroup) []hookGroup {
 	for _, g := range groups {
 		filteredHooks := make([]hookCmd, 0, len(g.Hooks))
 		for _, h := range g.Hooks {
-			if !strings.Contains(h.Command, AgentLampMarker) {
+			if !IsAgentLampCommand(h.Command) {
 				filteredHooks = append(filteredHooks, h)
 			}
 		}

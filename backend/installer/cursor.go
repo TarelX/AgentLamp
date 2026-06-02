@@ -67,7 +67,8 @@ func (c *CursorInstaller) IsInstalled() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return strings.Contains(string(data), AgentLampMarker), nil
+	body := string(data)
+	return strings.Contains(body, RelayScriptName()) || strings.Contains(body, AgentLampMarker), nil
 }
 
 func (c *CursorInstaller) Install() error {
@@ -138,13 +139,13 @@ func (c *CursorInstaller) Status() (InstallStatus, error) {
 }
 
 func (c *CursorInstaller) buildCommand(event string) string {
-	return fmt.Sprintf(HookCommandTemplate(c.relayScript), "cursor", event, AgentLampMarker)
+	return HookCommand(c.relayScript, "cursor", event)
 }
 
 func removeAgentLampCursor(entries []cursorHookEntry) []cursorHookEntry {
 	out := make([]cursorHookEntry, 0, len(entries))
 	for _, e := range entries {
-		if !strings.Contains(e.Command, AgentLampMarker) {
+		if !IsAgentLampCommand(e.Command) {
 			out = append(out, e)
 		}
 	}

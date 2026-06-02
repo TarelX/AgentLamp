@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // RelayScriptName Windows 用 .ps1 (spawn 不能直接跑 .cmd, 必须 PowerShell)
@@ -67,12 +68,14 @@ func cleanupOldScripts(dir string) {
 
 func relayScriptContent(webhookBase string) string {
 	if runtime.GOOS == "windows" {
+		// ValueFromRemainingArguments 吞掉残留 marker / 多余位置参数, 防 IDE 升级老 hooks.json 报错
 		return fmt.Sprintf(`# AgentLamp hook relay (Windows / PowerShell)
-# 由 ~/.cursor/hooks.json 与 ~/.claude/settings.json 调用
+# 由 Cursor / Claude IDE 通过 hooks 配置调用
 # 用法: powershell -ExecutionPolicy Bypass -File hook-relay.ps1 <agent> <event>
 param(
     [Parameter(Position=0)] [string] $Agent,
-    [Parameter(Position=1)] [string] $Event
+    [Parameter(Position=1)] [string] $Event,
+    [Parameter(ValueFromRemainingArguments=$true)] $Rest
 )
 
 $WebhookBase = '%s'
@@ -109,14 +112,19 @@ exec curl -s -m 2 -X POST -H "Content-Type: application/json" --data-binary @- "
 `, webhookBase)
 }
 
-// HookCommandTemplate 平台特定的 hook 命令模板;
-// 调用方按 Sprintf(template, agent, event, marker) 拼出完整命令字符串
-func HookCommandTemplate(relayPath string) string {
+// HookCommand 拼出可直接写入 hooks.json 的命令字符串.
+// 不附带任何 # 注释 marker, 避免 Cursor 在 Windows 用 PowerShell scriptblock
+// 包裹命令时把 # 当注释起始符吞掉后续大括号导致解析失败.
+// 我们装的 hook 通过命令里包含 relay 脚本路径 (天然唯一) 来识别.
+func HookCommand(relayPath, agent, event string) string {
 	if runtime.GOOS == "windows" {
-		return fmt.Sprintf(
-			`powershell -ExecutionPolicy Bypass -File "%s" %%s %%s # %%s`,
-			relayPath,
-		)
+		return fmt.Sprintf(`powershell -ExecutionPolicy Bypass -File "%s" %s %s`, relayPath, agent, event)
 	}
-	return fmt.Sprintf(`"%s" %%s %%s # %%s`, relayPath)
+	return fmt.Sprintf(`"%s" %s %s`, relayPath, agent, event)
+}
+
+// IsAgentLampCommand 判断一条 hook 命令是不是本应用安装的, 既识别新路径也兼容老 marker
+func IsAgentLampCommand(cmd string) bool {
+	return strings.Contains(cmd, RelayScriptName()) ||
+		strings.Contains(cmd, AgentLampMarker)
 }

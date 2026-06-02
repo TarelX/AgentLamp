@@ -45,6 +45,12 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "AgentLamp",
 		Description: "跨平台 AI Agent 状态灯 - 程序员的过街信号",
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "io.github.tarelx.agentlamp",
+			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
+				logger.Info("second instance launched, focusing existing main window", "args", data.Args)
+			},
+		},
 		Services: []application.Service{
 			application.NewService(service.NewStatusService(agg)),
 			application.NewService(installSvc),
