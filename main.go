@@ -120,9 +120,10 @@ func buildMainWindow(app *application.App) *application.WebviewWindow {
 	})
 }
 
-// buildLampWindow 悬浮小灯; v0.1 暂不用 WindowMask (Wails v3 alpha
-// UpdateLayeredWindow 调用 size 与 position 参数错置, 见 v0.2 计划),
-// 仅靠 Frameless + Transparent + 锁死尺寸提供基本悬浮窗体验.
+// buildLampWindow 透明置顶悬浮小灯, 锁死尺寸防被拖拽 resize.
+//
+// 不启用 Windows.WindowMask: Wails v3 当前版本的 setWindowMask 在
+// UpdateLayeredWindow 调用时把 size 当 position 传, 导致 mask 与 webview 错位.
 func buildLampWindow(app *application.App) *application.WebviewWindow {
 	const w, h = 220, 380
 	return app.Window.NewWithOptions(application.WebviewWindowOptions{
