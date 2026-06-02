@@ -46,35 +46,48 @@ function App() {
   const prevState = useRef<AggregatedState>(mainState);
   const [runtimeAgents, setRuntimeAgents] = useState<RuntimeAgent[]>([]);
   const [backendConnected, setBackendConnected] = useState(false);
-  const [claudeInstalled, setClaudeInstalled] = useState<boolean | null>(null);
-  const [claudePath, setClaudePath] = useState<string>('');
-  const [installBusy, setInstallBusy] = useState(false);
-  const [installMsg, setInstallMsg] = useState<string>('');
+  const [installState, setInstallState] = useState<Record<'claude' | 'cursor', InstallSlot>>({
+    claude: { installed: null, path: '', busy: false, msg: '' },
+    cursor: { installed: null, path: '', busy: false, msg: '' },
+  });
 
-  const refreshClaudeStatus = async () => {
-    try {
-      const st = await InstallService.ClaudeStatus();
-      setClaudeInstalled(!!st.installed);
-      setClaudePath(st.settingsPath ?? '');
-    } catch {
-      setClaudeInstalled(null);
-    }
+  const refreshInstallStatus = async () => {
+    const [claudeSt, cursorSt] = await Promise.allSettled([
+      InstallService.ClaudeStatus(),
+      InstallService.CursorStatus(),
+    ]);
+    setInstallState((prev) => ({
+      claude: applySlot(prev.claude, claudeSt),
+      cursor: applySlot(prev.cursor, cursorSt),
+    }));
   };
 
-  const handleClaudeInstall = async () => {
-    setInstallBusy(true);
-    setInstallMsg('');
+  const toggleInstall = async (agent: 'claude' | 'cursor') => {
+    setInstallState((prev) => ({ ...prev, [agent]: { ...prev[agent], busy: true, msg: '' } }));
+    const cur = installState[agent];
+    const fn = installFn(agent, cur.installed === true);
+    const restartHint =
+      agent === 'claude' ? '重启 Claude Code 让 hook 生效' : '重启 Cursor 让 hook 生效';
     try {
-      const st = claudeInstalled
-        ? await InstallService.ClaudeUninstall()
-        : await InstallService.ClaudeInstall();
-      setClaudeInstalled(!!st.installed);
-      setClaudePath(st.settingsPath ?? '');
-      setInstallMsg(st.installed ? '已写入, 请重启 Claude Code 让 hook 生效' : '已卸载');
+      const st = await fn();
+      setInstallState((prev) => ({
+        ...prev,
+        [agent]: {
+          installed: !!st.installed,
+          path: st.settingsPath ?? '',
+          busy: false,
+          msg: st.installed ? `已写入, ${restartHint}` : '已卸载',
+        },
+      }));
     } catch (e) {
-      setInstallMsg(`失败: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setInstallBusy(false);
+      setInstallState((prev) => ({
+        ...prev,
+        [agent]: {
+          ...prev[agent],
+          busy: false,
+          msg: `失败: ${e instanceof Error ? e.message : String(e)}`,
+        },
+      }));
     }
   };
 
@@ -106,7 +119,7 @@ function App() {
         if (cancelled) return;
         setBackendConnected(true);
         applySnapshot(snap, setMainStateDemo, setRuntimeAgents);
-        void refreshClaudeStatus();
+        void refreshInstallStatus();
       })
       .catch(() => {
         // 浏览器开发模式下 (无 Wails runtime) 静默忽略, 走纯 demo 模式
@@ -179,23 +192,32 @@ function App() {
         </button>
       </section>
 
-      {claudeInstalled !== null && (
-        <section className="hooks-row">
-          <span className="hooks-label">
-            Claude hook: <strong>{claudeInstalled ? '已安装' : '未安装'}</strong>
-          </span>
-          <button
-            type="button"
-            className={`btn ${claudeInstalled ? '' : 'active'}`}
-            onClick={handleClaudeInstall}
-            disabled={installBusy}
-          >
-            {installBusy ? '处理中…' : claudeInstalled ? '卸载' : '一键安装'}
-          </button>
-          {installMsg && <span className="hooks-msg">{installMsg}</span>}
-          {claudePath && <span className="hooks-path" title={claudePath}>{claudePath}</span>}
-        </section>
-      )}
+      {(['claude', 'cursor'] as const).map((agent) => {
+        const slot = installState[agent];
+        if (slot.installed === null) return null;
+        const display = agent === 'claude' ? 'Claude hook' : 'Cursor hook';
+        return (
+          <section key={agent} className="hooks-row">
+            <span className="hooks-label">
+              {display}: <strong>{slot.installed ? '已安装' : '未安装'}</strong>
+            </span>
+            <button
+              type="button"
+              className={`btn ${slot.installed ? '' : 'active'}`}
+              onClick={() => void toggleInstall(agent)}
+              disabled={slot.busy}
+            >
+              {slot.busy ? '处理中…' : slot.installed ? '卸载' : '一键安装'}
+            </button>
+            {slot.msg && <span className="hooks-msg">{slot.msg}</span>}
+            {slot.path && (
+              <span className="hooks-path" title={slot.path}>
+                {slot.path}
+              </span>
+            )}
+          </section>
+        );
+      })}
 
       <footer className="app-footer">
         <span>v0.1 · MIT · </span>
@@ -206,6 +228,36 @@ function App() {
       </footer>
     </div>
   );
+}
+
+interface InstallSlot {
+  installed: boolean | null;
+  path: string;
+  busy: boolean;
+  msg: string;
+}
+
+interface RawInstallStatus {
+  installed?: boolean;
+  settingsPath?: string;
+}
+
+function applySlot(prev: InstallSlot, settled: PromiseSettledResult<RawInstallStatus>): InstallSlot {
+  if (settled.status !== 'fulfilled') {
+    return { ...prev, installed: null };
+  }
+  return {
+    ...prev,
+    installed: !!settled.value.installed,
+    path: settled.value.settingsPath ?? '',
+  };
+}
+
+function installFn(agent: 'claude' | 'cursor', isInstalled: boolean) {
+  if (agent === 'claude') {
+    return isInstalled ? InstallService.ClaudeUninstall : InstallService.ClaudeInstall;
+  }
+  return isInstalled ? InstallService.CursorUninstall : InstallService.CursorInstall;
 }
 
 function applySnapshot(

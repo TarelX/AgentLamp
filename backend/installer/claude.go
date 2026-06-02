@@ -38,7 +38,7 @@ func (c *ClaudeInstaller) SettingsPath() string {
 	return c.settingsPath
 }
 
-// claudeEvents 我们需要监听的 7 个事件; SubagentStop / PreCompact 暂不需要
+// claudeEvents 监听的 hook 事件名; SubagentStop / PreCompact 信号较弱不挂
 var claudeEvents = []string{
 	"SessionStart",
 	"UserPromptSubmit",

@@ -6,7 +6,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -18,9 +17,11 @@ import (
 	"github.com/TarelX/AgentLamp/backend"
 )
 
-// HookHandler agent 适配器实现此接口接收 hook 推送
+// HookHandler agent 适配器实现此接口接收 hook 推送.
+// response 直接作为 HTTP 响应体返回给 agent (例如 Claude 期待 {"continue":true},
+// Cursor 期待 {"permission":"allow"} 或空对象).
 type HookHandler interface {
-	HandleHook(event string, payload []byte) (backend.AgentStatus, error)
+	HandleHook(event string, payload []byte) (response []byte, err error)
 }
 
 // Server 本机 HTTP webhook
@@ -111,13 +112,16 @@ func (s *Server) handleHook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.HandleHook(event, body); err != nil {
+	resp, err := h.HandleHook(event, body)
+	if err != nil {
 		s.logger.Warn("hook handler error", "agent", agent, "event", event, "err", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Claude Code hook 协议要求返回 JSON; 默认放行不打断 Claude
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"continue": true})
+	if len(resp) == 0 {
+		_, _ = w.Write([]byte(`{}`))
+		return
+	}
+	_, _ = w.Write(resp)
 }

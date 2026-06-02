@@ -10,7 +10,6 @@ import (
 )
 
 // claudeHookInput Claude Code hook 通过 stdin 推送的标准字段
-// 参考 https://docs.anthropic.com/claude-code/hooks (v2.x)
 type claudeHookInput struct {
 	SessionID      string `json:"session_id,omitempty"`
 	TranscriptPath string `json:"transcript_path,omitempty"`
@@ -29,10 +28,9 @@ func NewClaudeAdapter(agg *aggregator.Aggregator) *ClaudeAdapter {
 }
 
 // HandleHook 由 webhook server 在收到请求时调用; payload 是 hook 原始 stdin JSON
-func (c *ClaudeAdapter) HandleHook(event string, payload []byte) (backend.AgentStatus, error) {
+func (c *ClaudeAdapter) HandleHook(event string, payload []byte) ([]byte, error) {
 	var in claudeHookInput
 	if len(payload) > 0 {
-		// 容忍空 body 或非 JSON: 仍按 URL 上的 event 推断状态
 		_ = json.Unmarshal(payload, &in)
 	}
 	if in.HookEventName == "" {
@@ -40,25 +38,25 @@ func (c *ClaudeAdapter) HandleHook(event string, payload []byte) (backend.AgentS
 	}
 
 	state := mapClaudeEventToState(in.HookEventName)
-	status := backend.AgentStatus{
+	c.agg.Push(backend.AgentStatus{
 		Name:       backend.AgentClaude,
 		State:      state,
 		Enabled:    true,
 		Message:    in.CWD,
 		LastUpdate: time.Now().UnixMilli(),
-	}
-	c.agg.Push(status)
-	return status, nil
+	})
+	return []byte(`{"continue":true}`), nil
 }
 
-// mapClaudeEventToState Claude 9 个官方事件到 AgentLamp 状态的映射
+// mapClaudeEventToState Claude 官方事件到主灯状态的映射;
+// SessionStart 视为 idle, 真正进入 running 由 UserPromptSubmit 驱动
 func mapClaudeEventToState(event string) backend.AggregatedState {
 	switch event {
 	case "Notification":
 		return backend.StateWaiting
-	case "UserPromptSubmit", "PreToolUse", "PostToolUse", "SessionStart":
+	case "UserPromptSubmit", "PreToolUse", "PostToolUse":
 		return backend.StateRunning
-	case "Stop", "SubagentStop", "SessionEnd":
+	case "Stop", "SubagentStop", "SessionEnd", "SessionStart":
 		return backend.StateIdle
 	default:
 		return backend.StateRunning

@@ -1,4 +1,4 @@
-// AgentLamp 主入口: 创建 Wails 应用, 装配 webhook server / aggregator / status service.
+// AgentLamp 主入口
 package main
 
 import (
@@ -29,7 +29,7 @@ func init() {
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
-	// 先创建一个临时聚合器以便构造 service; app 创建后再回填 app 引用
+	// 先建聚合器再构造依赖它的 service; 拿到 app 后回填以便发事件
 	agg := aggregator.New(nil, []backend.AgentName{
 		backend.AgentClaude,
 		backend.AgentCursor,
@@ -59,6 +59,14 @@ func main() {
 
 	hookSrv := server.New(webhookAddr, logger)
 	hookSrv.Register(backend.AgentClaude, adapters.NewClaudeAdapter(agg))
+	hookSrv.Register(backend.AgentCursor, adapters.NewCursorAdapter(agg))
+
+	codex, err := adapters.NewCodexWatcher(agg, 3*time.Second, logger)
+	if err != nil {
+		logger.Warn("codex watcher init failed", "err", err)
+	} else if err := codex.Start(); err != nil {
+		logger.Warn("codex watcher start failed", "err", err)
+	}
 
 	go agg.Run()
 	go func() {
