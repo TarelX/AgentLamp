@@ -139,12 +139,6 @@ Linux 还需要：
 sudo apt install pkg-config build-essential libgtk-4-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev
 ```
 
-### 致谢
-
-- [JasonLam08/cursor_agent_status_light](https://github.com/JasonLam08/cursor_agent_status_light) — ESP32 硬件版启发，物理交通灯审美来源
-- [cxyax/AgentStatusLight](https://github.com/cxyax/AgentStatusLight) — macOS 软件版先行者，状态语义参考
-- [Wails](https://v3.wails.io/) — 让 Go + Web 跨平台桌面应用成为现实
-
 ### Roadmap
 
 - **v0.1** ✓ 主框架 + Claude / Cursor / Codex 三 agent + 一键 hook + 悬浮窗 + systray
