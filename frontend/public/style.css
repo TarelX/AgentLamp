@@ -23,8 +23,14 @@
 html,
 body,
 #root {
-  min-height: 100vh;
   background: transparent;
+  overflow: hidden;
+}
+
+body,
+#root {
+  width: 100vw;
+  height: 100vh;
 }
 
 a {
@@ -37,7 +43,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* ---------- 主灯窗口 (透明置顶, 整窗拖动) ---------- */
+/* ---------- 悬浮模式 (URL /lamp) ---------- */
 
 .lamp-window {
   width: 100vw;
@@ -46,29 +52,51 @@ a:hover {
   align-items: center;
   justify-content: center;
   background: transparent;
-  -webkit-app-region: drag;
-  app-region: drag;
+  overflow: hidden;
+  --wails-draggable: drag;
 }
 
-/* 灯组件本身仍可接收点击 (例如未来加双击打开设置) */
 .lamp-window .traffic-light {
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
+  --wails-draggable: drag;
 }
 
-/* ---------- 设置窗口 ---------- */
+.lamp-window .agent-lamp-stage {
+  padding: 20px;
+  gap: 8px;
+}
 
-.settings-window {
+.lamp-window .bulb {
+  width: 80px;
+  height: 80px;
+}
+
+.lamp-window .traffic-light {
+  width: 130px;
+  padding: 12px 10px;
+  gap: 10px;
+}
+
+/* ---------- 主窗口 (URL /) ---------- */
+
+.main-window {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 50% 0%, #1e2028 0%, #0a0a0f 60%);
-  padding: 28px 36px 40px;
+  background: radial-gradient(ellipse at 50% 0%, #1e2028 0%, #0a0a0f 70%);
+  padding: 16px 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
+  overflow-y: auto;
 }
 
-.settings-header h1 {
-  font-size: 20px;
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.main-header h1 {
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: -0.01em;
   background: linear-gradient(180deg, #fff 0%, #c084fc 100%);
@@ -77,39 +105,40 @@ a:hover {
   -webkit-text-fill-color: transparent;
 }
 
-.settings-header .tagline {
-  font-size: 12px;
+.main-header .tagline {
+  font-size: 11px;
   color: #9ca3af;
-  margin-top: 4px;
+  margin-top: 2px;
   letter-spacing: 0.04em;
 }
 
-.settings-header .tagline .warn {
+.main-header .tagline .warn {
   color: #f59e0b;
-  margin-left: 6px;
+  margin-left: 4px;
 }
 
-.settings-section {
+.main-stage {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px 18px;
-  background: #14141a;
-  border: 1px solid #1f1f28;
-  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0 8px;
 }
 
-.settings-section h2 {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #9ca3af;
+.main-footer {
+  text-align: center;
+  font-size: 11px;
+  color: #4b5563;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #1f1f28;
 }
 
-.settings-section .hint {
-  font-size: 12px;
+.main-footer a {
   color: #6b7280;
+}
+
+.main-footer a:hover {
+  color: #9ca3af;
 }
 
 /* ---------- 通用控件 ---------- */
@@ -142,8 +171,19 @@ a:hover {
   cursor: not-allowed;
 }
 
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  padding: 0;
+}
+
 .controls,
-.audio-row {
+.audio-row,
+.row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -162,12 +202,18 @@ a:hover {
   width: 140px;
 }
 
+.hint {
+  font-size: 11px;
+  color: #6b7280;
+}
+
 /* ---------- agent chip ---------- */
 
 .agents-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .agent-chip {
@@ -176,9 +222,9 @@ a:hover {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #0a0a0f;
+  background: #14141a;
   border: 1px solid #1f1f28;
-  font-size: 12px;
+  font-size: 11px;
   color: #d1d5db;
 }
 
@@ -201,6 +247,7 @@ a:hover {
   gap: 10px;
   flex-wrap: wrap;
   font-size: 12px;
+  margin-bottom: 6px;
 }
 
 .hooks-label {
@@ -218,24 +265,69 @@ a:hover {
 .hooks-path {
   color: #4b5563;
   font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
-  font-size: 11px;
-  max-width: 320px;
+  font-size: 10px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.settings-footer {
+/* ---------- 设置覆盖层 (Modal) ---------- */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  z-index: 100;
+}
+
+.settings-panel {
+  width: min(380px, 100%);
+  height: 100%;
+  background: #14141a;
+  border-left: 1px solid #1f1f28;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px 24px;
+  overflow-y: auto;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.settings-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-panel-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #0a0a0f;
+  border: 1px solid #1f1f28;
+  border-radius: 8px;
+}
+
+.settings-section h3 {
   font-size: 11px;
-  color: #4b5563;
-  padding-top: 8px;
-  border-top: 1px solid #1f1f28;
-}
-
-.settings-footer a {
-  color: #6b7280;
-}
-
-.settings-footer a:hover {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #9ca3af;
 }

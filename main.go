@@ -40,6 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("init install service: %v", err)
 	}
+	winSvc := service.NewWindowService()
 
 	app := application.New(application.Options{
 		Name:        "AgentLamp",
@@ -47,6 +48,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(service.NewStatusService(agg)),
 			application.NewService(installSvc),
+			application.NewService(winSvc),
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
@@ -57,9 +59,11 @@ func main() {
 	})
 	agg.SetApp(app)
 
-	lamp := buildLampWindow(app)
-	settings := buildSettingsWindow(app)
-	tray := buildSystemTray(app, agg, lamp, settings)
+	mainWin := buildMainWindow(app)
+	lampWin := buildLampWindow(app)
+	winSvc.SetWindows(mainWin, lampWin)
+
+	tray := buildSystemTray(app, agg, winSvc, mainWin, lampWin)
 	_ = tray
 
 	hookSrv := server.New(webhookAddr, logger)
@@ -90,76 +94,82 @@ func main() {
 	agg.Stop()
 }
 
-// buildLampWindow 构造主窗口: 透明置顶可拖动小窗, 仅渲染物理灯
+// buildMainWindow 默认显示的完整 UI 窗口, 普通窗口装饰
+func buildMainWindow(app *application.App) *application.WebviewWindow {
+	return app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:            "AgentLamp",
+		Width:            420,
+		Height:           720,
+		MinWidth:         360,
+		MinHeight:        560,
+		URL:              "/",
+		BackgroundColour: application.NewRGB(10, 10, 15),
+	})
+}
+
+// buildLampWindow 透明置顶悬浮小灯, 默认隐藏, 由"悬浮模式"开关或托盘菜单激活
 func buildLampWindow(app *application.App) *application.WebviewWindow {
 	return app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:               "AgentLamp",
-		Width:               240,
-		Height:              360,
-		MinWidth:            200,
-		MinHeight:           300,
-		URL:                 "/",
+		Title:               "AgentLamp · Floating",
+		Width:               220,
+		Height:              340,
+		URL:                 "/lamp",
 		Frameless:           true,
 		AlwaysOnTop:         true,
+		Hidden:              true,
 		BackgroundType:      application.BackgroundTypeTransparent,
 		BackgroundColour:    application.NewRGBA(0, 0, 0, 0),
 		MinimiseButtonState: application.ButtonHidden,
 		MaximiseButtonState: application.ButtonHidden,
 		CloseButtonState:    application.ButtonHidden,
-		InitialPosition:     application.WindowCentered,
 		Windows: application.WindowsWindow{
 			DisableFramelessWindowDecorations: true,
 		},
 		Mac: application.MacWindow{
-			InvisibleTitleBarHeight: 0,
-			Backdrop:                application.MacBackdropTransparent,
-			TitleBar:                application.MacTitleBarHidden,
+			Backdrop: application.MacBackdropTransparent,
+			TitleBar: application.MacTitleBarHidden,
 		},
 	})
 }
 
-// buildSettingsWindow 构造独立设置窗口, 启动时隐藏, 由托盘菜单触发显示
-func buildSettingsWindow(app *application.App) *application.WebviewWindow {
-	return app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "AgentLamp · 设置",
-		Width:            860,
-		Height:           640,
-		MinWidth:         640,
-		MinHeight:        480,
-		URL:              "/settings",
-		Hidden:           true,
-		BackgroundColour: application.NewRGB(10, 10, 15),
-	})
-}
-
-// buildSystemTray 创建托盘图标 + 右键菜单, 并订阅主灯状态变化更新图标
+// buildSystemTray 托盘图标 + 右键菜单, 订阅状态变化更新颜色
 func buildSystemTray(
 	app *application.App,
 	agg *aggregator.Aggregator,
-	lamp *application.WebviewWindow,
-	settings *application.WebviewWindow,
+	winSvc *service.WindowService,
+	mainWin *application.WebviewWindow,
+	lampWin *application.WebviewWindow,
 ) *application.SystemTray {
 	tray := app.SystemTray.New()
 	tray.SetTooltip("AgentLamp")
 	tray.SetIcon(icon.PNGForState(agg.Snapshot().MainState))
-	tray.AttachWindow(lamp)
 
 	menu := application.NewMenu()
-	menu.Add("显示 / 隐藏主灯").OnClick(func(*application.Context) {
-		if lamp.IsVisible() {
-			lamp.Hide()
-		} else {
-			lamp.Show().Focus()
-		}
+	menu.Add("打开主窗口").OnClick(func(*application.Context) {
+		winSvc.SwitchToFull()
 	})
-	menu.Add("打开设置…").OnClick(func(*application.Context) {
-		settings.Show().Focus()
+	menu.Add("切换悬浮模式").OnClick(func(*application.Context) {
+		if winSvc.CurrentMode() == string(service.ModeFloating) {
+			winSvc.SwitchToFull()
+		} else {
+			winSvc.SwitchToFloating()
+		}
 	})
 	menu.AddSeparator()
 	menu.Add("退出").OnClick(func(*application.Context) {
 		app.Quit()
 	})
 	tray.SetMenu(menu)
+
+	tray.OnClick(func() {
+		if mainWin.IsVisible() {
+			mainWin.Hide()
+		} else if lampWin.IsVisible() {
+			lampWin.Hide()
+		} else {
+			winSvc.SwitchToFull()
+		}
+	})
 
 	agg.Subscribe(func(snap backend.Snapshot) {
 		tray.SetIcon(icon.PNGForState(snap.MainState))

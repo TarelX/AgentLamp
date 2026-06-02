@@ -5,8 +5,9 @@ import { findPreset, DEFAULT_PRESET_BINDINGS } from './audio/presets';
 import { unlockAudio } from './audio/synth';
 import type { AggregatedState } from './types';
 import * as StatusService from '../bindings/github.com/TarelX/AgentLamp/backend/service/statusservice';
+import * as WindowService from '../bindings/github.com/TarelX/AgentLamp/backend/service/windowservice';
 
-/** 主窗口: 透明置顶可拖动的极简物理灯. 任何配置/操作都在独立设置窗口完成 */
+/** 悬浮模式: 透明置顶可拖动小灯, 双击切回完整窗口 */
 function Lamp() {
   const [state, setState] = useState<AggregatedState>('idle');
   const prev = useRef<AggregatedState>('idle');
@@ -30,7 +31,6 @@ function Lamp() {
     };
   }, []);
 
-  // 状态进入边沿时播放对应默认音效
   useEffect(() => {
     if (prev.current !== state) {
       if (state === 'waiting' && DEFAULT_PRESET_BINDINGS.waiting) {
@@ -46,7 +46,12 @@ function Lamp() {
   }, [state]);
 
   return (
-    <div className="lamp-window" onClick={unlockAudio}>
+    <div
+      className="lamp-window"
+      onClick={unlockAudio}
+      onDoubleClick={() => void WindowService.SwitchToFull()}
+      title="双击切回主窗口"
+    >
       <TrafficLight state={state} showLabel={false} />
     </div>
   );
